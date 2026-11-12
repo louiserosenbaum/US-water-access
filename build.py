@@ -17,8 +17,23 @@ con.sql("""
     ORDER BY people_served DESC
 """).show()
 
-print("Systems with no county match (should be close to 0):")
-con.sql("SELECT COUNT(*) AS no_county FROM mn_systems_with_county WHERE county IS NULL").show()
+print("Systems with no county, split by tribal (EPA-regulated) vs. state-regulated:")
+con.sql("""
+    SELECT is_tribal_epa_regulated, COUNT(*) AS systems, SUM(population_served) AS people
+    FROM mn_systems_with_county
+    WHERE county IS NULL
+    GROUP BY ALL
+""").show()
+
+print("Health-based violations, last 5 years: tribal vs. state-regulated systems:")
+con.sql("""
+    SELECT is_tribal_epa_regulated,
+           COUNT(*) AS systems,
+           SUM(CASE WHEN health_violations_5yr > 0 THEN 1 ELSE 0 END) AS systems_with_violation,
+           ROUND(100.0 * SUM(CASE WHEN health_violations_5yr > 0 THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_with_violation
+    FROM mn_system_violations
+    GROUP BY ALL
+""").show()
 
 print("Largest counties by people served:")
 con.sql("""

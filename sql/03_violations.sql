@@ -15,7 +15,7 @@ SELECT DISTINCT
     VIOLATION_STATUS                                            AS status,
     TRY_STRPTIME(NON_COMPL_PER_BEGIN_DATE, '%m/%d/%Y')::DATE    AS began
 FROM read_csv_auto('data/raw/SDWA_VIOLATIONS_ENFORCEMENT.csv', all_varchar = true)
-WHERE PWSID LIKE 'MN%'
+WHERE PWSID IN (SELECT pwsid FROM mn_systems)   -- includes EPA-regulated tribal systems
   AND IS_HEALTH_BASED_IND = 'Y';
 
 CREATE OR REPLACE TABLE mn_system_violations AS
@@ -25,6 +25,7 @@ SELECT
     s.county,
     s.source_type,
     s.population_served,
+    s.is_tribal_epa_regulated,
     COUNT(DISTINCT v.violation_id)                                        AS health_violations_5yr,
     COUNT(DISTINCT CASE WHEN v.status = 'Unaddressed' THEN v.violation_id END) AS unaddressed
 FROM mn_systems_with_county AS s

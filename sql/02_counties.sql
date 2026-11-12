@@ -7,16 +7,20 @@ SELECT DISTINCT
     PWSID                    AS pwsid,
     TRIM(COUNTY_SERVED)      AS county
 FROM read_csv_auto('data/raw/SDWA_GEOGRAPHIC_AREAS.csv', all_varchar = true)
-WHERE PWSID LIKE 'MN%'
+WHERE PWSID IN (SELECT pwsid FROM mn_systems)
   AND AREA_TYPE_CODE = 'CN'
   AND COUNTY_SERVED IS NOT NULL;
 
 -- A few systems serve more than one county. To avoid counting the same people twice,
 -- give each system one home county (the first alphabetically) for county totals.
 CREATE OR REPLACE TABLE mn_systems_with_county AS
+-- Tribal water systems in Minnesota are regulated by EPA Region 5, not the state.
+-- Their IDs start with '05' instead of 'MN', and their geography records use tribal
+-- areas instead of counties, so flag them instead of leaving them as unknown.
 SELECT
     s.*,
-    c.county
+    c.county,
+    s.pwsid NOT LIKE 'MN%' AS is_tribal_epa_regulated
 FROM mn_systems AS s
 LEFT JOIN (
     SELECT pwsid, MIN(county) AS county
