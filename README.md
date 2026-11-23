@@ -22,7 +22,7 @@ Who drinks from wells, who is responsible for their water, and where are people 
 
 - **Tribal systems:** Minnesota's tribal water systems are regulated by the EPA, not the state, and use a different ID format (`05...` instead of `MN...`). My first query left them out by accident; I caught it because they had no county match.
 - **Fixing my own mistake:** an earlier version said 2.7x. I had filtered by `STATE_CODE = 'MN'`, but that column is the owner's mailing state, not where the system is. That pulled in 14 out-of-state systems and labeled them tribal. The query now goes by system ID.
-- **Like with like:** small systems have more violations everywhere, so the tribal comparison only uses systems under 500 people. Other size groups have too few tribal systems (1 to 4) to compare.
+- **Controlling for size:** small systems have more violations regardless of who regulates them (11% of systems under 500 people vs. 4% of systems serving 10,000+), and most tribal systems are small. So the tribal comparison only uses systems under 500 people. Other size groups have too few tribal systems (1 to 4) to compare.
 - **Limits:** 21 systems is a small group, and the EPA and the state may monitor and record violations differently. This shows where to look, not a cause.
 
 ## How it's built

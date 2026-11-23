@@ -254,7 +254,7 @@ html = f"""<!DOCTYPE html>
 <section>
   <div class="num">03</div>
   <h2>Among small systems, tribal systems had about {ratio:.1f}x the violation rate</h2>
-  <p>Comparing like with like (systems under {SMALL} people), <b>{t_hit} of {t_n}</b> tribal systems had a recorded
+  <p>Because small systems have more violations everywhere, this compares only systems under {SMALL} people: <b>{t_hit} of {t_n}</b> tribal systems had a recorded
      health-based violation in the last five years, versus <b>{s_hit} of {s_n}</b> state-regulated ones.</p>
   <div class="chart">{div(c3, "compare")}</div>
   <p class="note">{t_n} systems is a small group, so one or two systems moves the rate a lot. A recorded violation also
