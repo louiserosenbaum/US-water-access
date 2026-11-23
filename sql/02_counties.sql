@@ -20,7 +20,7 @@ CREATE OR REPLACE TABLE mn_systems_with_county AS
 SELECT
     s.*,
     c.county,
-    s.pwsid NOT LIKE 'MN%' AS is_tribal_epa_regulated
+    s.pwsid LIKE '05%' AS is_tribal_epa_regulated
 FROM mn_systems AS s
 LEFT JOIN (
     SELECT pwsid, MIN(county) AS county

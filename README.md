@@ -1,6 +1,6 @@
 # U.S. Water Access
 
-**Status: In progress.** First public version (interactive map) planned for January 31, 2027.
+**Status: In progress.** Story page (Minnesota): https://louiserosenbaum.github.io/us-water-access/ . Full interactive map planned for January 31, 2027.
 
 ## The question
 
@@ -14,13 +14,15 @@ Safe drinking water has been recognized as a human right by the United Nations s
 
 ![Share of systems vs. share of people on wells](images/wells_vs_people.png)
 
-95% of Minnesota's 1,000 active community water systems run on wells, but 49 river and lake systems serve nearly a third of the people (1.5 million). Most of the state's remaining residents likely rely on private wells, which federal drinking water rules do not cover. That gap is the next thing to check.
+95% of Minnesota's nearly 1,000 active community water systems run on wells, but 49 river and lake systems serve nearly a third of the people (1.5 million). Most of the state's remaining residents likely rely on private wells, which federal drinking water rules do not cover. That gap is the next thing to check.
 
 ![Small-system violation rates, tribal vs. state-regulated](images/small_system_violations.png)
 
-Tribal water systems in Minnesota are regulated by the EPA, not the state, and use a different ID format. My first query left them out by accident. With them included, and comparing small systems (under 500 people) to small systems, tribal systems were about 2.7x as likely to have a recorded health-based violation in the last five years. The other size groups have too few tribal systems (1 to 4) to compare.
+Tribal water systems in Minnesota are regulated by the EPA, not the state, and use a different ID format (`05...` instead of `MN...`). My first query left them out by accident. Comparing small systems (under 500 people) to small systems, 7 of 21 tribal systems had a recorded health-based violation in the last five years, versus 45 of 467 state-regulated ones: about 3.5x the rate. The other size groups have too few tribal systems (1 to 4) to compare.
 
-**Limits:** 9 of 35 is a small number, and differences in how the EPA and the state monitor and record violations could explain part of the gap. This shows where to look, not a cause.
+**Fixing my own mistake:** an earlier version said 2.7x. I had filtered systems by `STATE_CODE = 'MN'`, but that column is the owner's mailing state, not where the water system is. That pulled in 14 systems from other states and labeled them tribal. The query now goes by the system ID.
+
+**Limits:** 21 systems is a small number, and differences in how the EPA and the state monitor and record violations could explain part of the gap. This shows where to look, not a cause.
 
 **Watch the totals:** one violation at Saint Paul Regional Water Services (392,529 people) makes it look like hundreds of thousands were affected. And Inver Grove Heights' ongoing radium problem appears as 22 separate quarterly violations. Counts of systems, not people or violations, give the fairer picture.
 
@@ -30,6 +32,7 @@ Tribal water systems in Minnesota are regulated by the EPA, not the state, and u
 2. `pip install duckdb`
 3. `python3 build.py`
 4. `pip install matplotlib`, then `python3 charts.py` to redraw the charts
+5. `pip install plotly pandas`, then `python3 story.py` to rebuild the story page (`docs/index.html`)
 
 ## Plan
 
@@ -47,7 +50,7 @@ Tribal water systems in Minnesota are regulated by the EPA, not the state, and u
 
 ## Tools
 
-SQL (DuckDB) for loading, cleaning, and joining. Python for the interactive map.
+SQL (DuckDB) for loading, cleaning, and joining. Python (matplotlib, Plotly) for the charts and the story page.
 
 ## Notes
 

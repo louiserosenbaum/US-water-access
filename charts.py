@@ -52,17 +52,20 @@ plt.close(fig)
 small = [r for r in rows if r["pop"] < 500]
 groups = [("State-regulated", False, GRAY), ("Tribal (EPA-regulated)", True, BLUE)]
 fig, ax = plt.subplots(figsize=(8, 3.2), dpi=200)
+rates = {}
 for i, (name, flag, color) in enumerate(groups):
     g = [r for r in small if r["tribal"] == flag]
     pct = 100 * sum(r["viol"] for r in g) / len(g)
+    rates[flag] = pct
     ax.barh(i, pct, color=color, height=0.5)
     ax.text(pct + 0.6, i, f"{pct:.1f}%  ({sum(r['viol'] for r in g)} of {len(g)} systems)",
             va="center", color=INK)
 ax.set_yticks([0, 1], [g[0] for g in groups])
-ax.invert_yaxis(); ax.set_xlim(0, 40)
+ax.invert_yaxis(); ax.set_xlim(0, max(rates.values()) * 1.6)
 ax.xaxis.set_major_formatter(lambda x, _: f"{x:.0f}%")
 style(ax)
-fig.text(0.01, 0.93, "Among small systems, tribal water systems had about 2.7x\nthe rate of recorded health-based violations",
+ratio = rates[True] / rates[False]
+fig.text(0.01, 0.93, f"Among small systems, tribal water systems had about {ratio:.1f}x\nthe rate of recorded health-based violations",
          color=INK, fontsize=12, fontweight="bold", va="top")
 fig.text(0.01, 0.02, "Systems serving under 500 people with a health-based violation, last 5 years. "
          "Source: EPA SDWIS.", color=MUTED, fontsize=9)

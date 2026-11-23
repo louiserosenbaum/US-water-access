@@ -24,7 +24,12 @@ SELECT
     CITY_NAME                                      AS city,
     SUBMISSIONYEARQUARTER                          AS snapshot
 FROM raw_systems
-WHERE STATE_CODE = 'MN'
+-- Which systems are in Minnesota: STATE_CODE is the owner's mailing state, NOT where the
+-- water system is. A Wisconsin mobile home park with a Minneapolis owner has STATE_CODE 'MN'.
+-- So go by the ID instead: 'MN' IDs are regulated by Minnesota, and '05' IDs are regulated
+-- by EPA Region 5 (tribal systems). Region 5 covers six states, so for '05' IDs we still
+-- need STATE_CODE to keep only Minnesota's.
+WHERE (PWSID LIKE 'MN%' OR (PWSID LIKE '05%' AND STATE_CODE = 'MN'))
   AND PWS_ACTIVITY_CODE = 'A'      -- active systems only
   AND PWS_TYPE_CODE = 'CWS'        -- community water systems only
 QUALIFY ROW_NUMBER() OVER (PARTITION BY PWSID ORDER BY SUBMISSIONYEARQUARTER DESC) = 1;
