@@ -16,7 +16,9 @@ ROOT = Path(__file__).parent
 OUT = ROOT / "docs"
 OUT.mkdir(exist_ok=True)
 
-PLOTLY_JS = "https://cdn.plot.ly/plotly-2.35.2.min.js"  # pinned so the page doesn't change under me
+from plotly.offline import get_plotlyjs_version
+# Pin the plotly.js version to the one this Python Plotly was built for, so the charts always match
+PLOTLY_JS = f"https://cdn.plot.ly/plotly-{get_plotlyjs_version()}.min.js"
 SMALL = 500  # "very small" system cutoff, same as charts.py
 
 # Colors: one blue for magnitude, one orange to call out violations, gray for everything else
