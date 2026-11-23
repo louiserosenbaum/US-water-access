@@ -240,7 +240,7 @@ html = f"""<!DOCTYPE html>
 <footer>
   Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files).
   Built with DuckDB SQL and Python/Plotly. Code and method:
-  <a href="https://github.com/louiserosenbaum/us-water-access">github.com/louiserosenbaum/us-water-access</a>.
+  <a href="https://github.com/louiserosenbaum/US-water-access">github.com/louiserosenbaum/US-water-access</a>.
   &middot; Louise Rosenbaum
 </footer>
 </main>

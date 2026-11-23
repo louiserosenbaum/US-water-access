@@ -1,6 +1,6 @@
 # U.S. Water Access
 
-**Status: In progress.** Story page (Minnesota): https://louiserosenbaum.github.io/us-water-access/ . Full interactive map planned for January 31, 2027.
+**Status: In progress.** Story page (Minnesota): https://louiserosenbaum.github.io/US-water-access/ . Full interactive map planned for January 31, 2027.
 
 ## The question
 
