@@ -167,7 +167,7 @@ c2.update_layout(
 c3 = go.Figure(go.Bar(
     y=["State-regulated", "Tribal (EPA-regulated)"], x=[s_pct, t_pct], orientation="h",
     marker=dict(color=[GRAY, ORANGE], cornerradius=4),
-    text=[f"{s_pct:.0f}%  ({s_hit} of {s_n})", f"{t_pct:.0f}%  ({t_hit} of {t_n})"],
+    text=[f"{s_pct:.1f}%  ({s_hit} of {s_n})", f"{t_pct:.1f}%  ({t_hit} of {t_n})"],
     textposition="outside", cliponaxis=False,
     hovertemplate="%{y}: %{x:.1f}%<extra></extra>", width=0.55,
 ))
@@ -181,8 +181,7 @@ c3.update_layout(
 
 def div(fig, name):
     return fig.to_html(full_html=False, include_plotlyjs=False, div_id=name,
-                       config={"displaylogo": False, "responsive": True,
-                               "modeBarButtonsToRemove": ["select2d", "lasso2d"]})
+                       config={"displayModeBar": False, "responsive": True})
 
 
 html = f"""<!DOCTYPE html>
