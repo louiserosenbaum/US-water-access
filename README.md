@@ -14,11 +14,11 @@ Safe drinking water has been recognized as a human right by the United Nations s
 
 ![Share of systems vs. share of people on wells](images/wells_vs_people.png)
 
-95% of Minnesota's nearly 1,000 active community water systems run on wells, but 49 river and lake systems serve nearly a third of the people (1.5 million). Most of the state's remaining residents likely rely on private wells, which federal drinking water rules do not cover. That gap is the next thing to check.
+95% of Minnesota's 998 active community water systems run on wells, but 48 river and lake systems serve nearly a third of the people (1.5 million). Most of the state's remaining residents likely rely on private wells, which federal drinking water rules do not cover. That gap is the next thing to check.
 
 ![Small-system violation rates, tribal vs. state-regulated](images/small_system_violations.png)
 
-Tribal water systems in Minnesota are regulated by the EPA, not the state, and use a different ID format (`05...` instead of `MN...`). My first query left them out by accident. Comparing small systems (under 500 people) to small systems, 7 of 21 tribal systems had a recorded health-based violation in the last five years, versus 45 of 467 state-regulated ones: about 3.5x the rate. The other size groups have too few tribal systems (1 to 4) to compare.
+Tribal water systems in Minnesota are regulated by the EPA, not the state, and use a different ID format (`05...` instead of `MN...`). My first query left them out by accident. Comparing small systems (under 500 people) to small systems, 7 of 21 tribal systems had a recorded health-based violation in the last five years, versus 46 of 477 state-regulated ones: about 3.5x the rate. The other size groups have too few tribal systems (1 to 4) to compare.
 
 **Fixing my own mistake:** an earlier version said 2.7x. I had filtered systems by `STATE_CODE = 'MN'`, but that column is the owner's mailing state, not where the water system is. That pulled in 14 systems from other states and labeled them tribal. The query now goes by the system ID.
 
