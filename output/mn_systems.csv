@@ -45,7 +45,6 @@ MN1270045,Richfield,CWS,GW,Groundwater (wells),38482,Richfield,2026Q3,Hennepin,f
 MN1450007,Newfolden,CWS,GW,Groundwater (wells),338,Newfolden,2026Q3,Marshall,false
 MN1180017,Ironton,CWS,GW,Groundwater (wells),578,Ironton,2026Q3,Crow Wing,false
 MN1800004,Wadena,CWS,GW,Groundwater (wells),4332,Wadena,2026Q3,Wadena,false
-NH1032070,COACH RUN CONDOS,CWS,GW,Groundwater (wells),60,MINNEAPOLIS,2026Q3,Rockingham,true
 MN1360002,International Falls,CWS,SW,"Surface water (rivers, lakes)",5637,International Falls,2026Q3,Koochiching,false
 MN1270024,Minneapolis,CWS,SW,"Surface water (rivers, lakes)",425300,Minneapolis,2026Q3,Hennepin,false
 MN1730004,Belgrade,CWS,GW,Groundwater (wells),745,Belgrade,2026Q3,Stearns,false
@@ -76,6 +75,7 @@ MN1550031,Kings Park - Hyland Addition,CWS,GW,Groundwater (wells),40,Oronoco,202
 MN1340010,Spicer,CWS,GWP,Groundwater (wells),1225,Spicer,2026Q3,Kandiyohi,false
 MN1270011,Edina,CWS,GW,Groundwater (wells),53494,Edina,2026Q3,Hennepin,false
 MN1090008,Kettle River,CWS,GW,Groundwater (wells),168,Kettle River,2026Q3,Carlton,false
+MN1040009,Pines Mobile Estates,CWS,GW,Groundwater (wells),60,McLean,2026Q3,Beltrami,false
 MN1530006,Leota,CWS,GWP,Groundwater (wells),225,Leota,2026Q3,Nobles,false
 MN1740007,Owatonna,CWS,GW,Groundwater (wells),26430,Owatonna,2026Q3,Steele,false
 MN1750002,Chokio,CWS,GW,Groundwater (wells),400,Chokio,2026Q3,Stevens,false
@@ -121,7 +121,6 @@ MN1470008,Litchfield,CWS,GW,Groundwater (wells),6786,Litchfield,2026Q3,Meeker,fa
 MN1270034,Minnetonka Beach,CWS,GW,Groundwater (wells),547,Minnetonka Beach,2026Q3,Hennepin,false
 MN1810004,Waseca,CWS,GW,Groundwater (wells),9241,Waseca,2026Q3,Waseca,false
 MN1510002,Chandler,CWS,GW,Groundwater (wells),270,Chandler,2026Q3,Murray,false
-WI6560125,COUNTRY COVE COURT LLC,CWS,GW,Groundwater (wells),150,MINNEAPOLIS,2026Q3,St. Croix,true
 MN1190002,Burnsville,CWS,SW,"Surface water (rivers, lakes)",64317,Burnsville,2026Q3,Dakota,false
 MN1690009,Cook,CWS,GW,Groundwater (wells),574,Cook,2026Q3,St. Louis,false
 MN1530001,Adrian,CWS,GW,Groundwater (wells),1211,Adrian,2026Q3,Nobles,false
@@ -205,7 +204,7 @@ MN1650010,Morton,CWS,GW,Groundwater (wells),400,Morton,2026Q3,Renville,false
 MN1620026,Saint Paul Regional Water Services,CWS,SW,"Surface water (rivers, lakes)",392529,St. Paul,2026Q3,Ramsey,false
 MN1190019,Rosemount,CWS,GW,Groundwater (wells),26500,Rosemount,2026Q3,Dakota,false
 MN1290013,Gentle Breezes Trailer Park,CWS,GW,Groundwater (wells),25,Nevis,2026Q3,Hubbard,false
-WI7440121,HARMONY HILLS MH VILLAGE,CWS,GW,Groundwater (wells),100,PLYMOUTH,2026Q3,Oneida,true
+MN1270015,Maple Hill Estates,CWS,GW,Groundwater (wells),490,Sherman,2026Q3,Hennepin,false
 MN1550020,Chester Heights,CWS,GW,Groundwater (wells),300,Rochester,2026Q3,Olmsted,false
 MN1180045,Knieff's Shore Acres,CWS,GW,Groundwater (wells),100,Deerwood,2026Q3,Crow Wing,false
 MN1040026,Secluded Acres,CWS,GW,Groundwater (wells),60,Bemidji,2026Q3,Beltrami,false
@@ -312,7 +311,6 @@ MN1400006,Webster Street Homes,CWS,GW,Groundwater (wells),34,Kasota,2026Q3,Le Su
 055294101,GRAND PORTAGE,CWS,SW,"Surface water (rivers, lakes)",820,GRAND PORTAGE,2026Q3,,true
 MN1020016,Columbia Heights,CWS,SWP,"Surface water (rivers, lakes)",22278,Columbia Heights,2026Q3,Anoka,false
 MN1690014,Ely,CWS,SW,"Surface water (rivers, lakes)",3258,Ely,2026Q3,St. Louis,false
-OK2005532,SHERWOOD FOREST MOBILE ESTATES,CWS,GW,Groundwater (wells),172,HARRIS,2026Q3,Oklahoma,true
 MN1870003,Echo,CWS,GWP,Groundwater (wells),269,Echo,2026Q3,Yellow Medicine,false
 MN1170004,Storden,CWS,GWP,Groundwater (wells),215,Storden,2026Q3,Cottonwood,false
 MN1770007,Long Prairie,CWS,GW,Groundwater (wells),3744,Long Prairie,2026Q3,Todd,false
@@ -362,7 +360,7 @@ MN1620001,Arden Hills,CWS,SWP,"Surface water (rivers, lakes)",9939,Arden Hills,2
 MN1560023,Perham,CWS,GW,Groundwater (wells),3421,Perham,2026Q3,Otter Tail,false
 MN1660015,Dundas,CWS,GW,Groundwater (wells),1490,Dundas,2026Q3,Rice,false
 MN1690035,Mountain Iron,CWS,GW,Groundwater (wells),2880,Mountain Iron,2026Q3,St. Louis,false
-WI8070023,GRANTSBURG MANUFACTURED HOME COMMUNITY,CWS,GW,Groundwater (wells),115,ST PAUL,2026Q3,Burnett,true
+MN1580019,Pokegama Lake Resort and MHP,CWS,GW,Groundwater (wells),400,Las Vegas,2026Q3,Pine,false
 MN1170005,Westbrook,CWS,GW,Groundwater (wells),785,Westbrook,2026Q3,Cottonwood,false
 MN1010016,McGregor,CWS,GW,Groundwater (wells),394,McGregor,2026Q3,Aitkin,false
 MN1480014,Foreston,CWS,GW,Groundwater (wells),340,Foreston,2026Q3,Mille Lacs,false
@@ -376,7 +374,6 @@ MN1500009,LeRoy,CWS,GW,Groundwater (wells),959,LeRoy,2026Q3,Mower,false
 MN1560029,Vergas,CWS,GW,Groundwater (wells),358,Vergas,2026Q3,Otter Tail,false
 MN1370003,Dawson,CWS,GW,Groundwater (wells),1466,Dawson,2026Q3,Lac qui Parle,false
 MN1260005,Herman,CWS,GW,Groundwater (wells),386,Herman,2026Q3,Grant,false
-CO0162343,HIGHLAND MOBILE HOME PARK,CWS,SWP,"Surface water (rivers, lakes)",107,DETROIT LAKES,2026Q3,Weld,true
 MN1640001,Belview,CWS,GW,Groundwater (wells),300,Belview,2026Q3,Redwood,false
 MN1680017,Parker Farms,CWS,GW,Groundwater (wells),40,Warroad,2026Q3,Roseau,false
 MN1180025,Riverton,CWS,GW,Groundwater (wells),126,Riverton,2026Q3,Crow Wing,false
@@ -390,6 +387,7 @@ MN1720004,Gibbon,CWS,GW,Groundwater (wells),790,Gibbon,2026Q3,Sibley,false
 MN1230004,Greenleafton,CWS,GW,Groundwater (wells),140,Preston,2026Q3,Fillmore,false
 MN1030025,Ogema,CWS,GWP,Groundwater (wells),204,Ogema,2026Q3,Becker,false
 MN1180016,Garrison Bay Resort,CWS,GW,Groundwater (wells),36,Minneapolis,2026Q3,Crow Wing,false
+MN1620017,Five Star Mobile Home Park,CWS,GW,Groundwater (wells),458,Skokie,2026Q3,Ramsey,false
 MN1540008,Twin Valley,CWS,GW,Groundwater (wells),707,Twin Valley,2026Q3,Norman,false
 MN1250006,Bellechester,CWS,GW,Groundwater (wells),169,Bellechester,2026Q3,Goodhue,false
 MN1040007,Birchlane Trailer Court,CWS,GW,Groundwater (wells),80,Bemidji,2026Q3,Beltrami,false
@@ -424,6 +422,7 @@ MN1680011,Warroad Estates Water,CWS,GW,Groundwater (wells),350,Warroad,2026Q3,Ro
 MN1680008,Lakewood Park and Sales,CWS,GW,Groundwater (wells),450,Warroad,2026Q3,Roseau,false
 MN1680002,Greenbush,CWS,GW,Groundwater (wells),680,Greenbush,2026Q3,Roseau,false
 MN1700026,Territory Community,CWS,GW,Groundwater (wells),320,Ham Lake,2026Q3,Scott,false
+MN1270076,Curtis Flats,CWS,GW,Groundwater (wells),33,Sherman Oaks,2026Q3,Hennepin,false
 MN1020044,Oak Grove,CWS,GW,Groundwater (wells),623,Oak Grove,2026Q3,Anoka,false
 MN1690031,Kinney,CWS,GW,Groundwater (wells),154,Kinney,2026Q3,St. Louis,false
 MN1270018,Long Lake,CWS,GW,Groundwater (wells),1729,Long Lake,2026Q3,Hennepin,false
@@ -464,7 +463,6 @@ MN1550005,Chosen Valley Mobile Home Park,CWS,GW,Groundwater (wells),73,Minneapol
 MN1390002,Anchor Bay Park,CWS,GW,Groundwater (wells),55,Baudette,2026Q3,Lake of the Woods,false
 MN1830004,Madelia,CWS,GW,Groundwater (wells),2319,Madelia,2026Q3,Watonwan,false
 MN1250005,Goodhue,CWS,GW,Groundwater (wells),1200,Goodhue,2026Q3,Goodhue,false
-FL6090898,CROFT BAY VILLAGE,CWS,GW,Groundwater (wells),48,EXCELSIOR,2026Q3,Citrus,true
 MN1550003,Zumbro Ridge Estates,CWS,GW,Groundwater (wells),270,Rochester,2026Q3,Olmsted,false
 MN1800003,Verndale,CWS,GW,Groundwater (wells),506,Verndale,2026Q3,Wadena,false
 MN1060003,Clinton,CWS,GW,Groundwater (wells),395,Clinton,2026Q3,Big Stone,false
@@ -550,6 +548,7 @@ MN1350002,Karlstad,CWS,GW,Groundwater (wells),713,Karlstad,2026Q3,Kittson,false
 MN1680009,Timberline Mobile Home Park,CWS,GW,Groundwater (wells),90,Salol,2026Q3,Roseau,false
 MN1700021,Westridge Lake Estates,CWS,GW,Groundwater (wells),180,Shakopee,2026Q3,Scott,false
 MN1750001,Alberta,CWS,GWP,Groundwater (wells),92,Alberta,2026Q3,Stevens,false
+MN1680012,Warroad MHP Community,CWS,GW,Groundwater (wells),100,Fort Worth,2026Q3,Roseau,false
 MN1860017,12 Hi Mobile Home Park,CWS,GW,Groundwater (wells),300,Plymouth,2026Q3,Wright,false
 MN1170002,Jeffers,CWS,GWP,Groundwater (wells),369,Jeffers,2026Q3,Cottonwood,false
 MN1420004,Ghent,CWS,GWP,Groundwater (wells),370,Ghent,2026Q3,Lyon,false
@@ -676,6 +675,7 @@ MN1510006,Hadley,CWS,GW,Groundwater (wells),56,Slayton,2026Q3,Murray,false
 MN1290010,Nevis,CWS,GW,Groundwater (wells),390,Nevis,2026Q3,Hubbard,false
 MN1220005,Easton,CWS,GWP,Groundwater (wells),199,Easton,2026Q3,Faribault,false
 MN1700012,Bonnevista Terrace Mobile Home Park,CWS,GW,Groundwater (wells),579,Shakopee,2026Q3,Scott,false
+MN1550008,Oronoco Estates MHC,CWS,GW,Groundwater (wells),505,Chicago,2026Q3,Olmsted,false
 MN1380001,Beaver Bay,CWS,SW,"Surface water (rivers, lakes)",130,Beaver Bay,2026Q3,Lake,false
 MN1030006,Oak Grove Mobile Home Park,CWS,GW,Groundwater (wells),60,Detroit Lakes,2026Q3,Becker,false
 MN1720007,New Auburn,CWS,GW,Groundwater (wells),456,New Auburn,2026Q3,Sibley,false
@@ -808,6 +808,7 @@ MN1050009,Benton Utilities LLC,CWS,GW,Groundwater (wells),120,Sauk Rapids,2026Q3
 MN1130020,"River Bend Mobile Home Park, Inc.",CWS,GW,Groundwater (wells),100,Shafer,2026Q3,Chisago,false
 MN1820022,Willernie,CWS,GWP,Groundwater (wells),525,Willernie,2026Q3,Washington,false
 MN1310004,Calumet,CWS,GW,Groundwater (wells),332,Calumet,2026Q3,Itasca,false
+MN1030010,Kountry Manor Mobile Home Park,CWS,GW,Groundwater (wells),80,Omaha,2026Q3,Becker,false
 MN1330004,Ogilvie,CWS,GW,Groundwater (wells),398,Ogilvie,2026Q3,Kanabec,false
 MN1020010,Centennial Square Mobile Home Park,CWS,GW,Groundwater (wells),2000,Blaine,2026Q3,Anoka,false
 MN1250021,Dennison,CWS,GW,Groundwater (wells),220,Dennison,2026Q3,Goodhue,false
@@ -853,6 +854,7 @@ MN1160006,Pine Mountain Park,CWS,GW,Groundwater (wells),60,St. Cloud,2026Q3,Cook
 MN1570005,Aaseby Court,CWS,GW,Groundwater (wells),50,Thief River Falls,2026Q3,Pennington,false
 MN1730037,Sauk Centre,CWS,GW,Groundwater (wells),4657,Sauk Centre,2026Q3,Stearns,false
 MN1490008,Upsala,CWS,GW,Groundwater (wells),482,Upsala,2026Q3,Morrison,false
+MN1730030,Bel Clare Estates,CWS,GW,Groundwater (wells),750,Orem,2026Q3,Stearns,false
 MN1220008,Kiester,CWS,GW,Groundwater (wells),491,Kiester,2026Q3,Faribault,false
 MN1660023,Sunrise Estates,CWS,GW,Groundwater (wells),32,New Prague,2026Q3,Rice,false
 MN1100017,Carver,CWS,GW,Groundwater (wells),6700,Carver,2026Q3,Carver,false
@@ -899,6 +901,7 @@ MN1630002,Plummer,CWS,GW,Groundwater (wells),276,Plummer,2026Q3,Red Lake,false
 MN1020005,GreyStone MHP,CWS,GW,Groundwater (wells),500,Watertown,2026Q3,Anoka,false
 MN1490003,Motley,CWS,GW,Groundwater (wells),682,Motley,2026Q3,Morrison,false
 MN1490001,Buckman,CWS,GW,Groundwater (wells),309,Buckman,2026Q3,Morrison,false
+MN1620019,Thirty-Twenty Estates,CWS,GW,Groundwater (wells),125,Irvine,2026Q3,Ramsey,false
 MN1570002,Saint Hilaire,CWS,GW,Groundwater (wells),257,St. Hilaire,2026Q3,Pennington,false
 MN1600004,East Grand Forks,CWS,SW,"Surface water (rivers, lakes)",9206,East Grand Forks,2026Q3,Polk,false
 MN1830008,Odin,CWS,GWP,Groundwater (wells),109,Odin,2026Q3,Watonwan,false
@@ -911,6 +914,7 @@ MN1310017,River Road Community,CWS,GW,Groundwater (wells),80,Grand Rapids,2026Q3
 MN1540007,Shelly,CWS,GW,Groundwater (wells),174,Shelly,2026Q3,Norman,false
 MN1460003,Fairmont,CWS,SW,"Surface water (rivers, lakes)",10328,Fairmont,2026Q3,Martin,false
 MN1280007,LaCrescent,CWS,GW,Groundwater (wells),5257,LaCrescent,2026Q3,Houston,false
+MN1480011,Mille Lacs Island Resort,CWS,GW,Groundwater (wells),400,Scottsdale,2026Q3,Mille Lacs,false
 MN1590001,Edgerton,CWS,GW,Groundwater (wells),1281,Edgerton,2026Q3,Pipestone,false
 MN1070013,Mapleton,CWS,GW,Groundwater (wells),1756,Mapleton,2026Q3,Blue Earth,false
 MN1730061,Grove Place Apartments,CWS,GW,Groundwater (wells),25,Melrose,2026Q3,Stearns,false
@@ -940,11 +944,11 @@ MN1210027,Westside Del Valle Homeowners Assoc.,CWS,GW,Groundwater (wells),40,Mil
 MN1200002,Dodge Center,CWS,GW,Groundwater (wells),2939,Dodge Center,2026Q3,Dodge,false
 MN1540010,Gary,CWS,GW,Groundwater (wells),226,Gary,2026Q3,Norman,false
 MN1130005,Harris,CWS,GW,Groundwater (wells),400,Harris,2026Q3,Chisago,false
+MN1310040,Wagon Wheel Mobile Home Park,CWS,GW,Groundwater (wells),70,Redondo Beach,2026Q3,Itasca,false
 MN1140011,Ulen,CWS,GW,Groundwater (wells),500,Ulen,2026Q3,Clay,false
 MN1470012,Eden Valley,CWS,GW,Groundwater (wells),1042,Eden Valley,2026Q3,Meeker,false
 MN1580001,Askov,CWS,GW,Groundwater (wells),364,Askov,2026Q3,Pine,false
 MN1310035,Cohasset Municipal Water System,CWS,GW,Groundwater (wells),1000,Cohasset,2026Q3,Itasca,false
-VT0005331,ROYALTON TERRACE,CWS,GW,Groundwater (wells),60,VICTORIA,2026Q3,Windsor,true
 MN1690001,White Township,CWS,SWP,"Surface water (rivers, lakes)",1559,Aurora,2026Q3,St. Louis,false
 MN1680014,Springsteel Island Supply,CWS,GW,Groundwater (wells),80,Warroad,2026Q3,Roseau,false
 MN1540001,Ada,CWS,GW,Groundwater (wells),1725,Ada,2026Q3,Norman,false
@@ -986,16 +990,10 @@ MN1020030,Wyoming Park LLC,CWS,GW,Groundwater (wells),225,Excelsior,2026Q3,Anoka
 MN1560026,Underwood,CWS,GW,Groundwater (wells),380,Underwood,2026Q3,Otter Tail,false
 MN1130018,Wyoming,CWS,GW,Groundwater (wells),3990,Wyoming,2026Q3,Chisago,false
 MN1140005,Glyndon,CWS,GW,Groundwater (wells),1386,Glyndon,2026Q3,Clay,false
-WI6060230,FOUNTAIN BLUFFS MHP LLC,CWS,GW,Groundwater (wells),25,MINNEAPOLIS,2026Q3,Buffalo,true
-OH7006012,HEATHERWOOD TERRACE TOWNHOUSES,CWS,GW,Groundwater (wells),411,MINNEAPOLIS,2026Q3,Richland,true
 MN1830001,Butterfield,CWS,GWP,Groundwater (wells),586,Butterfield,2026Q3,Watonwan,false
 MN1480004,Green Acres Mobile Home Park,CWS,GW,Groundwater (wells),80,Onamia,2026Q3,Mille Lacs,false
 MN1730002,Avon,CWS,GW,Groundwater (wells),1667,Avon,2026Q3,Stearns,false
 MN1430002,Brownton,CWS,GW,Groundwater (wells),722,Brownton,2026Q3,McLeod,false
 MN1040031,Oak Hills Fellowship Bible College,CWS,GW,Groundwater (wells),150,Bemidji,2026Q3,Beltrami,false
-WI6560140,HILLTOP ESTATES MHP,CWS,GW,Groundwater (wells),64,MINNEAPOLIS,2026Q3,St. Croix,true
-WI1570503,EQUINOX REI LLC DELLWOOD ESTATES,CWS,GW,Groundwater (wells),70,MINNEAPOLIS,2026Q3,Sauk,true
 MN1050004,Sauk Rapids,CWS,GW,Groundwater (wells),13835,Sauk Rapids,2026Q3,Benton,false
-WI6560143,ROLLING HILLS MHP LLC,CWS,GW,Groundwater (wells),90,MINNEAPOLIS,2026Q3,St. Croix,true
-WI6560136,COUNTRY VIEW HOLDINGS LLC,CWS,GW,Groundwater (wells),75,CHAMPLIN,2026Q3,St. Croix,true
 MN1530011,Worthington,CWS,SWP,"Surface water (rivers, lakes)",14052,Worthington,2026Q3,Nobles,false
