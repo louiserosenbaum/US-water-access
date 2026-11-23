@@ -76,33 +76,56 @@ pct_small_viol = 100 * small["has_violation"].mean()
 BASE_LAYOUT = dict(
     font=dict(family="Inter, system-ui, sans-serif", size=13, color=INK),
     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-    hoverlabel=dict(bgcolor="white", font_size=13, bordercolor="#d0d7de"),
+    hoverlabel=dict(bgcolor="white", font=dict(size=13, color=INK), bordercolor="#d0d7de"),
 )
 
 # ---------- chart 1: county map ----------
-all_names = sorted(mn_names)
-c1 = go.Figure(go.Choropleth(  # gray base so counties with no community system aren't blank
-    geojson=geo, featureidkey="properties.NAME", locations=all_names, z=[0] * len(all_names),
-    colorscale=[[0, "#e4e7eb"], [1, "#e4e7eb"]], showscale=False,
-    marker_line_color="white", marker_line_width=0.8,
-    hovertemplate="<b>%{location} County</b><br>No active community water system<extra></extra>",
-))
-c1.add_trace(go.Choropleth(
-    geojson=geo, featureidkey="properties.NAME",
-    locations=county["county"], z=county["share_on_wells"],
-    zmin=0, zmax=100,
-    colorscale=[[i / (len(BLUE_RAMP) - 1), c] for i, c in enumerate(BLUE_RAMP)],
-    marker_line_color="white", marker_line_width=0.8,
-    colorbar=dict(title=dict(text="% of people<br>on well systems", side="top"),
-                  ticksuffix="%", thickness=12, len=0.6, outlinewidth=0),
-    customdata=county[["systems", "people", "with_violation"]].to_numpy(),
-    hovertemplate="<b>%{location} County</b><br>"
-                  "%{z:.0f}% of people served by well systems<br>"
-                  "%{customdata[0]} community systems, %{customdata[1]:,} people<br>"
-                  "%{customdata[2]} with a health-based violation (5 yrs)<extra></extra>",
-))
-c1.update_geos(fitbounds="locations", visible=False)
-c1.update_layout(**BASE_LAYOUT, height=520, margin=dict(l=0, r=0, t=0, b=0))
+# Drawn as plain filled shapes on x/y axes (no map projection), so it renders the
+# same in every browser and doesn't depend on Plotly downloading a world map.
+from plotly.colors import sample_colorscale
+
+SCALE = [[i / (len(BLUE_RAMP) - 1), c] for i, c in enumerate(BLUE_RAMP)]
+NO_DATA = "#e4e7eb"
+by_name = county.set_index("county")
+
+
+def outer_rings(geom):
+    polys = geom["coordinates"] if geom["type"] == "MultiPolygon" else [geom["coordinates"]]
+    return [poly[0] for poly in polys]  # outer ring of each piece
+
+
+c1 = go.Figure()
+for f in geo["features"]:
+    name = f["properties"]["NAME"]
+    xs, ys = [], []
+    for ring in outer_rings(f["geometry"]):
+        xs += [pt[0] for pt in ring] + [None]
+        ys += [pt[1] for pt in ring] + [None]
+    if name in by_name.index:
+        r = by_name.loc[name]
+        color = sample_colorscale(SCALE, r["share_on_wells"] / 100)[0]
+        tip = (f"<b>{name} County</b><br>{r['share_on_wells']:.0f}% of people served by well systems<br>"
+               f"{int(r['systems'])} community systems, {int(r['people']):,} people<br>"
+               f"{int(r['with_violation'])} with a health-based violation (5 yrs)")
+    else:
+        color = NO_DATA
+        tip = f"<b>{name} County</b><br>No active community water system"
+    c1.add_trace(go.Scatter(x=xs, y=ys, fill="toself", fillcolor=color, mode="lines",
+                            line=dict(color="white", width=0.8), hoveron="fills",
+                            text=tip, hoverinfo="text", showlegend=False))
+# colorbar only (one invisible point carries the scale)
+c1.add_trace(go.Scatter(x=[-94], y=[46], mode="markers", hoverinfo="skip", showlegend=False,
+                        marker=dict(size=0.1, opacity=0, color=[0], cmin=0, cmax=100, colorscale=SCALE,
+                                    showscale=True,
+                                    colorbar=dict(title=dict(text="% of people<br>on well systems", side="top"),
+                                                  ticksuffix="%", thickness=12, len=0.6, outlinewidth=0))))
+mid_lat = 46.3
+c1.update_layout(
+    **BASE_LAYOUT, height=560, margin=dict(l=0, r=0, t=0, b=0),
+    xaxis=dict(visible=False, fixedrange=True),
+    yaxis=dict(visible=False, fixedrange=True, scaleanchor="x", scaleratio=1 / np.cos(np.radians(mid_lat))),
+    hovermode="closest",
+)
 
 # ---------- chart 2: every system as a dot ----------
 order = ["Groundwater (wells)", "Groundwater influenced by surface water"]
