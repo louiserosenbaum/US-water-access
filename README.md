@@ -1,5 +1,7 @@
 # U.S. Water Access
 
+**In Minnesota, small tribal water systems had about 3.5x the rate of health-based violations of similar-size state-regulated systems.**
+
 **[View the interactive story page →](https://louiserosenbaum.github.io/US-water-access/)**
 
 Who drinks from wells, who is responsible for their water, and where are people least protected? This project starts with Minnesota, using EPA drinking water data, SQL (DuckDB), and Python.
@@ -8,15 +10,15 @@ Who drinks from wells, who is responsible for their water, and where are people 
 
 ## Key findings: Minnesota
 
-- **Most systems are wells, but rivers and lakes serve a third of people.** 95% of the state's 998 active community water systems run on wells, while 48 river and lake systems serve 1.5 million people.
 - **Small tribal systems had about 3.5x the violation rate.** Among systems serving under 500 people, 7 of 21 tribal systems had a recorded health-based violation in the last five years, versus 46 of 477 state-regulated ones.
+- **Most systems are wells, but rivers and lakes serve a third of people.** 95% of the state's 998 active community water systems run on wells, while 48 river and lake systems serve 1.5 million people.
 - **Raw totals mislead.** One violation at Saint Paul Regional Water Services (392,529 people) makes it look like hundreds of thousands were affected, and one ongoing radium problem in Inver Grove Heights shows up as 22 quarterly violations. Counting systems gives the fairer picture.
+
+![Small-system violation rates, tribal vs. state-regulated](images/small_system_violations.png)
 
 <p align="center"><img src="images/county_map.png" width="520" alt="Share of people on well systems, by Minnesota county"></p>
 
 ![Share of systems vs. share of people on wells](images/wells_vs_people.png)
-
-![Small-system violation rates, tribal vs. state-regulated](images/small_system_violations.png)
 
 ## Method notes
 

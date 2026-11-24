@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Who drinks from wells in Minnesota?</title>
+<title>Minnesota drinking water: small tribal systems had 3.5x the violation rate</title>
 <script src="https://cdn.plot.ly/plotly-4.1.1.min.js"></script>
 <style>
   :root { --ink:#1f2933; --muted:#5f6b76; --accent:#d9622b; --blue:#1c5a99; }
@@ -14,7 +14,11 @@
   header .wrap, main { max-width:880px; margin:0 auto; }
   .kicker { text-transform:uppercase; letter-spacing:.12em; font-size:12px; opacity:.75; }
   h1 { font-size:clamp(32px,5vw,48px); line-height:1.1; margin:.3em 0 .4em; }
-  header p { font-size:18px; max-width:640px; opacity:.9; }
+  header p { font-size:18px; max-width:680px; opacity:.9; }
+  .hero { display:flex; gap:28px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+  .hero .big { font-size:clamp(72px,12vw,120px); font-weight:800; line-height:1; color:#ff9a66; }
+  .hero h1 { flex:1; min-width:280px; font-size:clamp(24px,3.2vw,34px); margin:0; }
+  .jump { color:#ffd2bb; white-space:nowrap; }
   .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; margin-top:36px; }
   .stat b { display:block; font-size:34px; line-height:1.1; }
   .stat span { font-size:14px; opacity:.8; }
@@ -32,14 +36,16 @@
 <body>
 <header><div class="wrap">
   <div class="kicker">Minnesota drinking water &middot; EPA SDWIS data</div>
-  <h1>Who drinks from wells in Minnesota?</h1>
-  <p>Most of the state's community water systems pump groundwater, and most of them are small.
-     Small systems are where health-based violations show up, and tribal systems show them most.</p>
+  <div class="hero">
+    <div class="big">3.5x</div>
+    <h1>Small tribal water systems in Minnesota had 3.5 times the rate of health-based violations of similar-size state systems.</h1>
+  </div>
+  <p>7 of 21 tribal systems serving under 500 people had a recorded health-based violation in the last five years,
+     versus 46 of 477 state-regulated ones. <a class="jump" href="#compare-section">See the comparison &darr;</a></p>
   <div class="stats">
     <div class="stat"><b>998</b><span>active community water systems</span></div>
     <div class="stat"><b>95%</b><span>of those systems run on wells</span></div>
     <div class="stat"><b>498</b><span>serve fewer than 500 people</span></div>
-    <div class="stat"><b>3.5x</b><span>violation rate, small tribal vs. small state systems</span></div>
   </div>
 </div></header>
 <main>
@@ -65,7 +71,7 @@
   <p class="note">Dots are spread up and down within each row so they don't sit on top of each other; the vertical position means nothing.</p>
 </section>
 
-<section>
+<section id="compare-section">
   <div class="num">03</div>
   <h2>Among small systems, tribal systems had about 3.5x the violation rate</h2>
   <p>Because small systems have more violations everywhere, this compares only systems under 500 people: <b>7 of 21</b> tribal systems had a recorded

@@ -194,7 +194,7 @@ html = f"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Who drinks from wells in Minnesota?</title>
+<title>Minnesota drinking water: small tribal systems had {ratio:.1f}x the violation rate</title>
 <script src="{PLOTLY_JS}"></script>
 <style>
   :root {{ --ink:{INK}; --muted:{MUTED}; --accent:{ORANGE}; --blue:#1c5a99; }}
@@ -205,7 +205,11 @@ html = f"""<!DOCTYPE html>
   header .wrap, main {{ max-width:880px; margin:0 auto; }}
   .kicker {{ text-transform:uppercase; letter-spacing:.12em; font-size:12px; opacity:.75; }}
   h1 {{ font-size:clamp(32px,5vw,48px); line-height:1.1; margin:.3em 0 .4em; }}
-  header p {{ font-size:18px; max-width:640px; opacity:.9; }}
+  header p {{ font-size:18px; max-width:680px; opacity:.9; }}
+  .hero {{ display:flex; gap:28px; align-items:center; flex-wrap:wrap; margin-top:12px; }}
+  .hero .big {{ font-size:clamp(72px,12vw,120px); font-weight:800; line-height:1; color:#ff9a66; }}
+  .hero h1 {{ flex:1; min-width:280px; font-size:clamp(24px,3.2vw,34px); margin:0; }}
+  .jump {{ color:#ffd2bb; white-space:nowrap; }}
   .stats {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; margin-top:36px; }}
   .stat b {{ display:block; font-size:34px; line-height:1.1; }}
   .stat span {{ font-size:14px; opacity:.8; }}
@@ -223,14 +227,16 @@ html = f"""<!DOCTYPE html>
 <body>
 <header><div class="wrap">
   <div class="kicker">Minnesota drinking water &middot; EPA SDWIS data</div>
-  <h1>Who drinks from wells in Minnesota?</h1>
-  <p>Most of the state's community water systems pump groundwater, and most of them are small.
-     Small systems are where health-based violations show up, and tribal systems show them most.</p>
+  <div class="hero">
+    <div class="big">{ratio:.1f}x</div>
+    <h1>Small tribal water systems in Minnesota had {ratio:.1f} times the rate of health-based violations of similar-size state systems.</h1>
+  </div>
+  <p>{t_hit} of {t_n} tribal systems serving under {SMALL} people had a recorded health-based violation in the last five years,
+     versus {s_hit} of {s_n} state-regulated ones. <a class="jump" href="#compare-section">See the comparison &darr;</a></p>
   <div class="stats">
     <div class="stat"><b>{n_systems:,}</b><span>active community water systems</span></div>
     <div class="stat"><b>{pct_systems_wells:.0f}%</b><span>of those systems run on wells</span></div>
     <div class="stat"><b>{n_small:,}</b><span>serve fewer than {SMALL} people</span></div>
-    <div class="stat"><b>{ratio:.1f}x</b><span>violation rate, small tribal vs. small state systems</span></div>
   </div>
 </div></header>
 <main>
@@ -256,7 +262,7 @@ html = f"""<!DOCTYPE html>
   <p class="note">Dots are spread up and down within each row so they don't sit on top of each other; the vertical position means nothing.</p>
 </section>
 
-<section>
+<section id="compare-section">
   <div class="num">03</div>
   <h2>Among small systems, tribal systems had about {ratio:.1f}x the violation rate</h2>
   <p>Because small systems have more violations everywhere, this compares only systems under {SMALL} people: <b>{t_hit} of {t_n}</b> tribal systems had a recorded
