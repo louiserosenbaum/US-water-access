@@ -117,11 +117,12 @@ for f in geo["features"]:
 c1.add_trace(go.Scatter(x=[-94], y=[46], mode="markers", hoverinfo="skip", showlegend=False,
                         marker=dict(size=0.1, opacity=0, color=[0], cmin=0, cmax=100, colorscale=SCALE,
                                     showscale=True,
-                                    colorbar=dict(title=dict(text="% of people<br>on well systems", side="top"),
-                                                  ticksuffix="%", thickness=12, len=0.6, outlinewidth=0))))
+                                    colorbar=dict(title=dict(text="% of people on well systems", side="top"),
+                                                  orientation="h", x=0.5, xanchor="center", y=-0.02, yanchor="top",
+                                                  ticksuffix="%", thickness=10, len=0.7, outlinewidth=0))))
 mid_lat = 46.3
 c1.update_layout(
-    **BASE_LAYOUT, height=560, margin=dict(l=0, r=0, t=0, b=0),
+    **BASE_LAYOUT, height=600, margin=dict(l=0, r=0, t=0, b=70),
     xaxis=dict(visible=False, fixedrange=True),
     yaxis=dict(visible=False, fixedrange=True, scaleanchor="x", scaleratio=1 / np.cos(np.radians(mid_lat))),
     hovermode="closest",
@@ -157,30 +158,40 @@ for label, mask, color, size, symbol in [
         hovertemplate="<b>%{customdata[0]}</b><br>%{customdata[1]} County<br>"
                       "%{x:,} people<br>%{customdata[2]} health-based violation(s)<extra></extra>",
     ))
+for s_ in order:
+    top = centers[s_] - spread[s_] - 0.12
+    c2.add_annotation(x=0, xref="paper", y=top, yref="y", text=f"<b>{short[s_]}</b>", showarrow=False,
+                      xanchor="left", yanchor="bottom", font=dict(size=12, color=INK))
 c2.add_vline(x=SMALL, line=dict(color=MUTED, width=1, dash="dot"))
-c2.add_annotation(x=np.log10(SMALL), y=-0.75, text=f"← under {SMALL} people",
-                  showarrow=False, xanchor="right", font=dict(color=MUTED, size=12))
+c2.add_annotation(x=np.log10(SMALL), y=max(centers.values()) + 0.42, text=f" {SMALL} people",
+                  showarrow=False, xanchor="left", font=dict(color=MUTED, size=12))
 c2.update_layout(
     **BASE_LAYOUT, height=500, margin=dict(l=10, r=10, t=10, b=40),
-    xaxis=dict(type="log", title="People served (log scale)", gridcolor="#eceff2", zeroline=False),
-    yaxis=dict(tickvals=[centers[s_] for s_ in order], ticktext=[short[s_] for s_ in order],
-               range=[max(centers.values()) + 0.5, -0.85], showgrid=False, zeroline=False),
+    xaxis=dict(type="log", title="People served (log scale)", gridcolor="#eceff2", zeroline=False,
+               range=[np.log10(sys_df["population_served"].min() * 0.7), np.log10(sys_df["population_served"].max() * 1.5)],
+               tickvals=[10, 100, 1_000, 10_000, 100_000, 1_000_000], ticktext=["10", "100", "1k", "10k", "100k", "1M"]),
+    yaxis=dict(showticklabels=False, range=[max(centers.values()) + 0.5, -1.05], showgrid=False, zeroline=False),
     legend=dict(orientation="h", y=-0.22, x=0, font=dict(size=12)),
 )
 
 # ---------- chart 3: small systems, tribal vs state ----------
+# Group names sit above each bar (not beside it) so the bars keep their width on phones
+names = ["State-regulated", "Tribal (EPA-regulated)"]
 c3 = go.Figure(go.Bar(
-    y=["State-regulated", "Tribal (EPA-regulated)"], x=[s_pct, t_pct], orientation="h",
+    y=[0, 1], x=[s_pct, t_pct], orientation="h",
     marker=dict(color=[GRAY, ORANGE], cornerradius=4),
-    text=[f"{s_pct:.1f}%  ({s_hit} of {s_n})", f"{t_pct:.1f}%  ({t_hit} of {t_n})"],
-    textposition="outside", cliponaxis=False,
-    hovertemplate="%{y}: %{x:.1f}%<extra></extra>", width=0.55,
+    text=[f"<b>{s_pct:.1f}%</b>  ({s_hit} of {s_n})", f"<b>{t_pct:.1f}%</b>  ({t_hit} of {t_n})"],
+    textposition="outside", cliponaxis=False, customdata=names,
+    hovertemplate="%{customdata}: %{x:.1f}%<extra></extra>", width=0.45,
 ))
+for i, n in enumerate(names):
+    c3.add_annotation(x=0, y=i - 0.28, text=n, showarrow=False, xanchor="left", yanchor="bottom",
+                      font=dict(size=13, color=INK))
 c3.update_layout(
-    **BASE_LAYOUT, height=220, margin=dict(l=10, r=40, t=10, b=40),
-    xaxis=dict(range=[0, max(t_pct, s_pct) * 1.45], ticksuffix="%", gridcolor="#eceff2",
-               title=f"Share of systems under {SMALL} people with a health-based violation"),
-    yaxis=dict(autorange="reversed"), showlegend=False,
+    **BASE_LAYOUT, height=260, margin=dict(l=10, r=10, t=10, b=50),
+    xaxis=dict(range=[0, max(t_pct, s_pct) * 1.7], ticksuffix="%", gridcolor="#eceff2",
+               title="% with a violation, last 5 years"),
+    yaxis=dict(autorange="reversed", showticklabels=False, range=[1.5, -0.75]), showlegend=False,
 )
 
 
