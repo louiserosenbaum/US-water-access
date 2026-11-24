@@ -134,14 +134,19 @@ short = {s: ("Surface water" if s.startswith("Surface") else
              "Wells, surface-influenced" if "influenced" in s else
              "Wells" if s.startswith("Groundwater") else s) for s in order}
 rng = np.random.default_rng(7)
-sys_df["y"] = sys_df["source_type"].map({s: i for i, s in enumerate(order)}) + rng.uniform(-0.3, 0.3, len(sys_df))
+# Row centers and spread: the Wells row holds ~95% of systems, so it gets a taller band
+centers = {order[0]: 0.0, order[1]: 1.35, order[2]: 2.2}
+spread = {order[0]: 0.55, order[1]: 0.15, order[2]: 0.3}
+for s_ in order[3:]:
+    centers[s_] = max(centers.values()) + 0.85; spread[s_] = 0.3
+sys_df["y"] = [centers[t] + rng.uniform(-spread[t], spread[t]) for t in sys_df["source_type"]]
 
 c2 = go.Figure()
 for label, mask, color, size, symbol in [
-    ("No health-based violation", ~sys_df["has_violation"] & ~sys_df["tribal"], GRAY, 6, "circle"),
+    ("No health-based violation", ~sys_df["has_violation"] & ~sys_df["tribal"], GRAY, 8, "circle"),
     ("Health-based violation in last 5 yrs", sys_df["has_violation"] & ~sys_df["tribal"], ORANGE, 8, "circle"),
-    ("Tribal system, no violation", ~sys_df["has_violation"] & sys_df["tribal"], GRAY, 10, "diamond"),
-    ("Tribal system, violation", sys_df["has_violation"] & sys_df["tribal"], ORANGE, 11, "diamond"),
+    ("Tribal system, no violation", ~sys_df["has_violation"] & sys_df["tribal"], GRAY, 9, "diamond"),
+    ("Tribal system, violation", sys_df["has_violation"] & sys_df["tribal"], ORANGE, 9, "diamond"),
 ]:
     d = sys_df[mask]
     c2.add_trace(go.Scatter(
@@ -153,13 +158,13 @@ for label, mask, color, size, symbol in [
                       "%{x:,} people<br>%{customdata[2]} health-based violation(s)<extra></extra>",
     ))
 c2.add_vline(x=SMALL, line=dict(color=MUTED, width=1, dash="dot"))
-c2.add_annotation(x=np.log10(SMALL), y=-0.55, text=f"← under {SMALL} people",
+c2.add_annotation(x=np.log10(SMALL), y=-0.75, text=f"← under {SMALL} people",
                   showarrow=False, xanchor="right", font=dict(color=MUTED, size=12))
 c2.update_layout(
-    **BASE_LAYOUT, height=420, margin=dict(l=10, r=10, t=10, b=40),
+    **BASE_LAYOUT, height=500, margin=dict(l=10, r=10, t=10, b=40),
     xaxis=dict(type="log", title="People served (log scale)", gridcolor="#eceff2", zeroline=False),
-    yaxis=dict(tickvals=list(range(len(order))), ticktext=[short[s] for s in order],
-               range=[len(order) - 0.4, -0.6], showgrid=False, zeroline=False),
+    yaxis=dict(tickvals=[centers[s_] for s_ in order], ticktext=[short[s_] for s_ in order],
+               range=[max(centers.values()) + 0.5, -0.85], showgrid=False, zeroline=False),
     legend=dict(orientation="h", y=-0.22, x=0, font=dict(size=12)),
 )
 
