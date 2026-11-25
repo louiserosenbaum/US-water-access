@@ -1,11 +1,49 @@
 county,population_2025,community_served,est_not_on_community,pct_not_on_community,served_exceeds_population
-Roseau,15246,7110,8136,53.4,false
-Clay,67734,57949,9785,14.4,false
-Traverse,3130,2174,956,30.5,false
+Becker,35497,13540,21957,61.9,false
+Wadena,14388,6927,7461,51.9,false
+Todd,26060,10029,16031,61.5,false
+Stevens,9747,6904,2843,29.2,false
+Dodge,21376,13895,7481,35.0,false
+Jackson,9857,6068,3789,38.4,false
+Hubbard,22369,5477,16892,75.5,false
 Pine,30472,11022,19450,63.8,false
 Chisago,59142,28708,30434,51.5,false
 Le Sueur,29453,22484,6969,23.7,false
 Red Lake,3940,2015,1925,48.9,false
+Morrison,34620,14559,20061,57.9,false
+Brown,25517,20635,4882,19.1,false
+Redwood,15265,10374,4891,32.0,false
+Watonwan,11459,8156,3303,28.8,false
+Carver,114379,99096,15283,13.4,false
+Cottonwood,11405,14114,0,0.0,true
+Kittson,4031,5018,0,0.0,true
+Lyon,25684,20829,4855,18.9,false
+Lake,10746,5654,5092,47.4,false
+Cass,31430,4540,26890,85.6,false
+Lincoln,5583,16757,0,0.0,true
+Norman,6336,3903,2433,38.4,false
+Rice,69939,57482,12457,17.8,false
+Waseca,18688,12933,5755,30.8,false
+Meeker,23603,11787,11816,50.1,false
+Scott,159017,127757,31260,19.7,false
+Stearns,164110,140944,23166,14.1,false
+Chippewa,12406,7690,4716,38.0,false
+Olmsted,166731,144163,22568,13.5,false
+Sherburne,104194,45816,58378,56.0,false
+Big Stone,5054,3566,1488,29.4,false
+Pennington,13686,9258,4428,32.4,false
+Clearwater,8647,2022,6625,76.6,false
+Lake of the Woods,3770,1002,2768,73.4,false
+Wabasha,21537,13886,7651,35.5,false
+Grant,6085,3437,2648,43.5,false
+Cook,5522,1404,4118,74.6,false
+Goodhue,48195,32255,15940,33.1,false
+Crow Wing,69132,29895,39237,56.8,false
+Fillmore,21540,13306,8234,38.2,false
+Anoka,381605,293187,88418,23.2,false
+St. Louis,200518,151522,48996,24.4,false
+Koochiching,11587,7092,4495,38.8,false
+Douglas,40120,19324,20796,51.8,false
 Kandiyohi,44720,30003,14717,32.9,false
 Washington,286895,244999,41896,14.6,false
 Wright,157559,114781,42778,27.2,false
@@ -23,8 +61,17 @@ Murray,7942,4415,3527,44.4,false
 Yellow Medicine,9477,6758,2719,28.7,false
 Pope,11420,4881,6539,57.3,false
 Faribault,13888,9699,4189,30.2,false
-Wilkin,6288,4189,2099,33.4,false
 Aitkin,16252,3478,12774,78.6,false
+Wilkin,6288,4189,2099,33.4,false
+Roseau,15246,7110,8136,53.4,false
+Clay,67734,57949,9785,14.4,false
+Traverse,3130,2174,956,30.5,false
+Dakota,457710,385076,72634,15.9,false
+Hennepin,1284784,1265413,19371,1.5,false
+Isanti,44386,19746,24640,55.5,false
+Polk,30545,20586,9959,32.6,false
+Pipestone,9260,6985,2275,24.6,false
+Freeborn,30440,23320,7120,23.4,false
 Benton,41744,19523,22221,53.2,false
 Itasca,45404,21457,23947,52.7,false
 Mower,40971,32224,8747,21.3,false
@@ -32,20 +79,6 @@ Carlton,36711,19904,16807,45.8,false
 Steele,37464,30780,6684,17.8,false
 Nicollet,34273,28956,5317,15.5,false
 Kanabec,16628,4254,12374,74.4,false
-Dakota,457710,385076,72634,15.9,false
-Hennepin,1284784,1265413,19371,1.5,false
-Isanti,44386,19746,24640,55.5,false
-Polk,30545,20586,9959,32.6,false
-Pipestone,9260,6985,2275,24.6,false
-Freeborn,30440,23320,7120,23.4,false
-Kittson,4031,5018,0,0.0,true
-Lyon,25684,20829,4855,18.9,false
-Lake,10746,5654,5092,47.4,false
-Cass,31430,4540,26890,85.6,false
-Lincoln,5583,16757,0,0.0,true
-Norman,6336,3903,2433,38.4,false
-Rice,69939,57482,12457,17.8,false
-Waseca,18688,12933,5755,30.8,false
 Mille Lacs,27753,11267,16486,59.4,false
 Otter Tail,61041,26505,34536,56.6,false
 McLeod,36631,27252,9379,25.6,false
@@ -53,36 +86,3 @@ Beltrami,47055,17282,29773,63.3,false
 Martin,19440,14932,4508,23.2,false
 Houston,18400,11200,7200,39.1,false
 Mahnomen,5153,1693,3460,67.1,false
-St. Louis,200518,151522,48996,24.4,false
-Koochiching,11587,7092,4495,38.8,false
-Douglas,40120,19324,20796,51.8,false
-Becker,35497,13540,21957,61.9,false
-Wadena,14388,6927,7461,51.9,false
-Todd,26060,10029,16031,61.5,false
-Stevens,9747,6904,2843,29.2,false
-Dodge,21376,13895,7481,35.0,false
-Hubbard,22369,5477,16892,75.5,false
-Jackson,9857,6068,3789,38.4,false
-Big Stone,5054,3566,1488,29.4,false
-Pennington,13686,9258,4428,32.4,false
-Clearwater,8647,2022,6625,76.6,false
-Lake of the Woods,3770,1002,2768,73.4,false
-Wabasha,21537,13886,7651,35.5,false
-Cook,5522,1404,4118,74.6,false
-Grant,6085,3437,2648,43.5,false
-Goodhue,48195,32255,15940,33.1,false
-Morrison,34620,14559,20061,57.9,false
-Brown,25517,20635,4882,19.1,false
-Redwood,15265,10374,4891,32.0,false
-Watonwan,11459,8156,3303,28.8,false
-Carver,114379,99096,15283,13.4,false
-Cottonwood,11405,14114,0,0.0,true
-Meeker,23603,11787,11816,50.1,false
-Scott,159017,127757,31260,19.7,false
-Stearns,164110,140944,23166,14.1,false
-Chippewa,12406,7690,4716,38.0,false
-Olmsted,166731,144163,22568,13.5,false
-Sherburne,104194,45816,58378,56.0,false
-Crow Wing,69132,29895,39237,56.8,false
-Fillmore,21540,13306,8234,38.2,false
-Anoka,381605,293187,88418,23.2,false
