@@ -127,15 +127,6 @@ def draw_map(values, scale, bar_title):
     return fig
 
 
-map1_values = {}
-for name in mn_names:
-    if name in by_name.index:
-        r = by_name.loc[name]
-        map1_values[name] = (r["share_on_wells"],
-            f"<b>{name} County</b><br>{r['share_on_wells']:.0f}% of people served by well systems<br>"
-            f"{int(r['systems'])} community systems, {int(r['people']):,} people<br>"
-            f"{int(r['with_violation'])} with a health-based violation (5 yrs)")
-c1 = draw_map(map1_values, SCALE, "% of people on well systems")
 
 # ---------- chart 4: people not on a community system (mostly private wells) ----------
 pw = pd.read_csv(ROOT / "output" / "mn_private_wells.csv")
@@ -147,7 +138,6 @@ for _, r in pw.iterrows():
     map4_values[r["county"]] = (r["pct_not_on_community"],
         f"<b>{r['county']} County</b><br>{r['pct_not_on_community']:.0f}% not on a community system<br>"
         f"about {int(r['est_not_on_community']):,} of {int(r['population_2025']):,} people{note}")
-c4 = draw_map(map4_values, SCALE_PW, "% of people not on a community water system")
 pw_total = int(pw["est_not_on_community"].sum())
 pw_pop = int(pw["population_2025"].sum())
 pw_pct = 100 * pw_total / pw_pop
@@ -155,6 +145,141 @@ pw_top_share = pw.nlargest(3, "pct_not_on_community")
 pw_top_people = pw.nlargest(1, "est_not_on_community").iloc[0]
 pw_n_majority = int((pw["pct_not_on_community"] >= 50).sum())
 pw_flagged = ", ".join(sorted(pw.loc[pw["served_exceeds_population"], "county"]))
+
+# ---------- map explorer: one county map, several layers ----------
+# Each layer recolors the same counties and swaps the text panel next to the map.
+# Colors and hover text are computed here; the page's JavaScript only switches between them.
+ORANGE_RAMP = ["#fdf1ea", "#f9d2bd", "#f2a77f", "#e47a48", "#c9551f", "#8f3610"]
+PURPLE_RAMP = ["#f4f2fa", "#d9d3ee", "#b2a6dc", "#8774c4", "#5e4aa3", "#3b2c70"]
+TEAL_RAMP = ["#effafa", "#c6ecec", "#8fd3d4", "#4fb2b6", "#22878d", "#0d5a5f"]
+
+
+def ring_area_sq_mi(ring):
+    # shoelace formula on lon/lat, scaled to miles at the ring's latitude
+    lat0 = np.radians(np.mean([pt[1] for pt in ring]))
+    xs = np.array([pt[0] for pt in ring]) * 69.17 * np.cos(lat0)
+    ys = np.array([pt[1] for pt in ring]) * 69.0
+    return abs(np.dot(xs, np.roll(ys, 1)) - np.dot(ys, np.roll(xs, 1))) / 2
+
+
+names_sorted = sorted(mn_names)
+geom = []
+area = {}
+for f in geo["features"]:
+    name = f["properties"]["NAME"]
+    xs, ys = [], []
+    for ring in outer_rings(f["geometry"]):
+        xs += [round(pt[0], 4) for pt in ring] + [None]
+        ys += [round(pt[1], 4) for pt in ring] + [None]
+    geom.append({"name": name, "x": xs, "y": ys})
+    area[name] = sum(ring_area_sq_mi(r) for r in outer_rings(f["geometry"]))
+
+pw_by = pw.set_index("county")
+pop = pw_by["population_2025"].to_dict()
+
+
+def top3(pairs, fmt):
+    pairs = sorted(pairs, key=lambda t: t[1], reverse=True)[:3]
+    return "".join(f"<li>{n}: {fmt(v)}</li>" for n, v in pairs)
+
+
+def build_layer(key, label, ramp, values, tips, lo, hi, lo_txt, hi_txt, title, body, top_html, note, log=False):
+    scale = [[i / (len(ramp) - 1), c] for i, c in enumerate(ramp)]
+    colors = []
+    for g in geom:
+        v = values.get(g["name"])
+        if v is None or (isinstance(v, float) and np.isnan(v)):
+            colors.append(NO_DATA)
+            continue
+        t = (np.log10(max(v, lo)) - np.log10(lo)) / (np.log10(hi) - np.log10(lo)) if log else (v - lo) / (hi - lo)
+        colors.append(sample_colorscale(scale, float(min(max(t, 0), 1)))[0])
+    return {"key": key, "label": label, "colors": colors,
+            "tips": [tips.get(g["name"], f"<b>{g['name']} County</b><br>No data") for g in geom],
+            "gradient": f"linear-gradient(90deg, {', '.join(ramp)})", "lo": lo_txt, "hi": hi_txt,
+            "title": title, "body": body, "top": top_html, "note": note}
+
+
+layers = []
+
+# 1. Water source
+v, t = {}, {}
+for name in names_sorted:
+    if name in by_name.index:
+        r = by_name.loc[name]
+        v[name] = r["share_on_wells"]
+        t[name] = (f"<b>{name} County</b><br>{r['share_on_wells']:.0f}% of people served by well systems<br>"
+                   f"{int(r['systems'])} community systems, {int(r['people']):,} people")
+low_wells = sorted(((n, x) for n, x in v.items()), key=lambda q: q[1])[:3]
+layers.append(build_layer(
+    "source", "Water source", BLUE_RAMP, v, t, 0, 100, "0% wells", "100% wells",
+    "Where the water comes from",
+    f"In <b>{n_counties_mostly_wells} of {n_counties}</b> counties with a community system, most people served get groundwater. "
+    f"Statewide, {pct_people_wells:.0f}% of people on community systems drink well water. The big exceptions draw from "
+    f"Lake Superior or rivers.",
+    "Least well water:<ul>" + "".join(f"<li>{n}: {x:.0f}% wells</li>" for n, x in low_wells) + "</ul>",
+    "Community water systems only. Each system counts in one home county."))
+
+# 2. Private wells
+v = {n: r["pct_not_on_community"] for n, r in pw_by.iterrows()}
+t = {}
+for n, r in pw_by.iterrows():
+    note = "<br><i>Set to 0: systems here also serve other counties</i>" if r["served_exceeds_population"] else ""
+    t[n] = (f"<b>{n} County</b><br>{r['pct_not_on_community']:.0f}% not on a community system<br>"
+            f"about {int(r['est_not_on_community']):,} of {int(r['population_2025']):,} people{note}")
+layers.append(build_layer(
+    "private", "Private wells", GREEN_RAMP, v, t, 0, 100, "0%", "100% off public water",
+    "Who's not on public water",
+    f"About <b>{pw_total:,}</b> Minnesotans ({pw_pct:.0f}%) aren't on a community system, mostly private wells that "
+    f"federal drinking water rules don't cover. That matches the Minnesota Department of Health's figure of about 1.2 million. "
+    f"In <b>{pw_n_majority}</b> counties it's at least half the people.",
+    "Highest share:<ul>" + top3(v.items(), lambda x: f"{x:.0f}%") + "</ul>",
+    f"Estimate: Census 2025 population minus people served. Set to 0 where systems cross county lines ({pw_flagged})."))
+
+# 3. Water quality: share of community systems with a health-based violation
+v, t = {}, {}
+for name in names_sorted:
+    if name in by_name.index:
+        r = by_name.loc[name]
+        v[name] = 100 * r["with_violation"] / r["systems"]
+        t[name] = (f"<b>{name} County</b><br>{int(r['with_violation'])} of {int(r['systems'])} community systems "
+                   f"had a health-based violation (5 yrs)")
+worst = [(n, x) for n, x in v.items() if by_name.loc[n, "systems"] >= 5]
+layers.append(build_layer(
+    "quality", "Water quality", ORANGE_RAMP, v, t, 0, 40, "0% of systems", "40%+ with a violation",
+    "Health-based violations",
+    f"Share of each county's community systems with at least one health-based violation in the last five years. "
+    f"Statewide it's {100 * sys_df['has_violation'].mean():.0f}%. Small systems have more violations, and small tribal systems "
+    f"the most ({ratio:.1f}x similar state systems).",
+    "Highest share (counties with 5+ systems):<ul>" + top3(worst, lambda x: f"{x:.0f}%") + "</ul>",
+    "Counts systems, not people, so one big utility doesn't swamp a county. Tribal systems have no county and aren't shown here."))
+
+# 4. Population density
+v = {n: pop[n] / area[n] for n in pop if n in area}
+t = {n: f"<b>{n} County</b><br>{pop[n]:,} people (2025)<br>{v[n]:,.0f} people per square mile" for n in v}
+layers.append(build_layer(
+    "population", "Population", PURPLE_RAMP, v, t, 2, 3000, "2 per sq mi", "3,000+",
+    "Where people live",
+    "People per square mile, 2025. Compare it with the other layers: the dense metro counties are mostly on big "
+    "community systems, while the lightly populated north relies most on private wells.",
+    "Most dense:<ul>" + top3(v.items(), lambda x: f"{x:,.0f} per sq mi") + "</ul>",
+    "Census Vintage 2025 county estimates. Area is approximate, from the county outlines.", log=True))
+
+# 5. Hardness (only if build.py produced it)
+hard_path = ROOT / "output" / "mn_hardness.csv"
+if hard_path.exists():
+    hd = pd.read_csv(hard_path).set_index("county")
+    v = hd["median_hardness_mg_l"].to_dict()
+    t = {n: (f"<b>{n} County</b><br>median {r['median_hardness_mg_l']:.0f} mg/L as CaCO3 ({r['hardness_class']})<br>"
+             f"{int(r['wells'])} wells, {int(r['samples'])} samples since 2010") for n, r in hd.iterrows()}
+    layers.append(build_layer(
+        "hardness", "Hardness", TEAL_RAMP, v, t, 0, 400, "soft", "very hard (400+ mg/L)",
+        "How hard the groundwater is",
+        "Median hardness of groundwater samples from wells, by county. Hard water isn't a health risk and isn't regulated, "
+        "but it's why so many Minnesota homes have water softeners.",
+        "Hardest:<ul>" + top3(v.items(), lambda x: f"{x:.0f} mg/L") + "</ul>",
+        "Water Quality Portal well samples, 2010 to now. USGS classes: soft under 60, moderate 61 to 120, hard 121 to 180, very hard over 180 mg/L."))
+
+explorer_json = json.dumps({"geom": geom, "layers": layers})
 
 # ---------- chart 2: every system as a dot ----------
 order = ["Groundwater (wells)", "Groundwater influenced by surface water"]
@@ -228,6 +353,50 @@ def div(fig, name):
                        config={"displayModeBar": False, "responsive": True})
 
 
+
+EXPLORER_JS = """
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById('explorer-data').textContent);
+  const el = document.getElementById('explorer-map');
+  const layout = {
+    margin: {l: 0, r: 0, t: 0, b: 0}, height: Math.min(520, Math.round(el.clientWidth * 1.05)), showlegend: false, hovermode: 'closest',
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: {family: 'Inter, system-ui, sans-serif', size: 13, color: '#1f2933'},
+    hoverlabel: {bgcolor: 'white', bordercolor: '#d0d7de', font: {size: 13, color: '#1f2933'}},
+    xaxis: {visible: false, fixedrange: true},
+    yaxis: {visible: false, fixedrange: true, scaleanchor: 'x', scaleratio: 1 / Math.cos(46.3 * Math.PI / 180)}
+  };
+  function traces(L) {
+    return D.geom.map((g, i) => ({
+      type: 'scatter', x: g.x, y: g.y, fill: 'toself', fillcolor: L.colors[i], mode: 'lines',
+      line: {color: 'white', width: 0.8}, hoveron: 'fills', text: L.tips[i], hoverinfo: 'text'
+    }));
+  }
+  function show(key) {
+    const L = D.layers.find(l => l.key === key);
+    Plotly.react(el, traces(L), layout, {displayModeBar: false, responsive: true});
+    document.getElementById('ex-title').textContent = L.title;
+    document.getElementById('ex-body').innerHTML = L.body;
+    document.getElementById('ex-top').innerHTML = L.top;
+    document.getElementById('ex-note').textContent = L.note;
+    document.getElementById('ex-bar').style.background = L.gradient;
+    document.getElementById('ex-lo').textContent = L.lo;
+    document.getElementById('ex-hi').textContent = L.hi;
+    document.querySelectorAll('.ex-btn').forEach(b => b.setAttribute('aria-pressed', b.dataset.key === key));
+  }
+  const btns = document.getElementById('ex-buttons');
+  D.layers.forEach(L => {
+    const b = document.createElement('button');
+    b.className = 'ex-btn'; b.dataset.key = L.key; b.textContent = L.label;
+    b.onclick = () => show(L.key);
+    btns.appendChild(b);
+  });
+  show(D.layers[0].key);
+})();
+</script>
+"""
+
 html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -261,6 +430,18 @@ html = f"""<!DOCTYPE html>
   .hl {{ color:var(--accent); font-weight:600; }}
   footer {{ border-top:1px solid #e6e3dc; margin-top:64px; padding-top:24px; font-size:14px; color:var(--muted); }}
   a {{ color:var(--blue); }}
+  .ex-buttons {{ display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 4px; }}
+  .ex-btn {{ font:inherit; font-size:14px; padding:7px 14px; border-radius:999px; border:1px solid #cfd6dd;
+             background:white; color:var(--ink); cursor:pointer; }}
+  .ex-btn[aria-pressed="true"] {{ background:#0b3566; border-color:#0b3566; color:white; }}
+  .ex-grid {{ display:grid; grid-template-columns: minmax(0,1.6fr) minmax(0,1fr); gap:20px; align-items:start; }}
+  .ex-panel h3 {{ margin:4px 0 8px; font-size:20px; }}
+  .ex-panel p {{ margin:0 0 10px; }}
+  .ex-panel ul {{ margin:4px 0 10px; padding-left:20px; }}
+  .ex-key {{ margin:6px 12px 4px; }}
+  .ex-key .bar {{ height:10px; border-radius:5px; }}
+  .ex-key .ends {{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:3px; }}
+  @media (max-width: 720px) {{ .ex-grid {{ grid-template-columns: 1fr; }} }}
 </style>
 </head>
 <body>
@@ -283,13 +464,24 @@ html = f"""<!DOCTYPE html>
 
 <section>
   <div class="num">01</div>
-  <h2>In most counties, it's mostly wells</h2>
-  <p>In <b>{n_counties_mostly_wells} of {n_counties}</b> counties with a community water system, at least half
-     the people served get their water from groundwater systems. Statewide that's
-     <b>{pct_people_wells:.0f}%</b> of the {n_people:,} people these systems serve. The largest exceptions are
-     {exceptions_txt} counties, where the big systems draw from Lake Superior or rivers. Hover a county for its numbers.</p>
-  <div class="chart">{div(c1, "map")}</div>
-  <p class="note">Each system is placed in one home county. People on private wells are not counted here; this is community systems only.</p>
+  <h2>Explore the map</h2>
+  <p>Pick a layer to recolor Minnesota's 87 counties. Hover or tap a county for its numbers.</p>
+  <div class="ex-buttons" id="ex-buttons"></div>
+  <div class="ex-grid">
+    <div class="chart" style="margin-top:8px">
+      <div id="explorer-map"></div>
+      <div class="ex-key"><div class="bar" id="ex-bar"></div>
+        <div class="ends"><span id="ex-lo"></span><span id="ex-hi"></span></div></div>
+    </div>
+    <div class="ex-panel">
+      <h3 id="ex-title"></h3>
+      <p id="ex-body"></p>
+      <div id="ex-top"></div>
+      <p class="note" id="ex-note"></p>
+    </div>
+  </div>
+  <script type="application/json" id="explorer-data">{explorer_json}</script>
+  {EXPLORER_JS}
 </section>
 
 <section>
@@ -324,7 +516,7 @@ html = f"""<!DOCTYPE html>
      {pw_top_share.iloc[1]["county"]} ({pw_top_share.iloc[1]["pct_not_on_community"]:.0f}%) and
      {pw_top_share.iloc[2]["county"]} ({pw_top_share.iloc[2]["pct_not_on_community"]:.0f}%). The most people are in
      {pw_top_people["county"]} County, about {int(pw_top_people["est_not_on_community"]):,}.</p>
-  <div class="chart">{div(c4, "wells-map")}</div>
+  <p class="note">Switch the map in section 01 to <b>Private wells</b> to see it by county.</p>
   <p class="note">Estimate: Census 2025 county population minus people served by community systems. Some of these people
      are on small non-community systems, not private wells. Each system counts in one home county, so where systems
      serve across county lines the estimate is set to 0 ({pw_flagged}). Tribal systems have no county in the EPA data
