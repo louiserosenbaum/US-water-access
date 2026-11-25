@@ -94,39 +94,67 @@ def outer_rings(geom):
     return [poly[0] for poly in polys]  # outer ring of each piece
 
 
-c1 = go.Figure()
-for f in geo["features"]:
-    name = f["properties"]["NAME"]
-    xs, ys = [], []
-    for ring in outer_rings(f["geometry"]):
-        xs += [pt[0] for pt in ring] + [None]
-        ys += [pt[1] for pt in ring] + [None]
+def draw_map(values, scale, bar_title):
+    """values: county name -> (percent 0-100, hover text). Counties not in values are gray."""
+    fig = go.Figure()
+    for f in geo["features"]:
+        name = f["properties"]["NAME"]
+        xs, ys = [], []
+        for ring in outer_rings(f["geometry"]):
+            xs += [pt[0] for pt in ring] + [None]
+            ys += [pt[1] for pt in ring] + [None]
+        if name in values:
+            pct, tip = values[name]
+            color = sample_colorscale(scale, max(0, min(pct, 100)) / 100)[0]
+        else:
+            color, tip = NO_DATA, f"<b>{name} County</b><br>No data"
+        fig.add_trace(go.Scatter(x=xs, y=ys, fill="toself", fillcolor=color, mode="lines",
+                                 line=dict(color="white", width=0.8), hoveron="fills",
+                                 text=tip, hoverinfo="text", showlegend=False))
+    # colorbar only (one invisible point carries the scale)
+    fig.add_trace(go.Scatter(x=[-94], y=[46], mode="markers", hoverinfo="skip", showlegend=False,
+                             marker=dict(size=0.1, opacity=0, color=[0], cmin=0, cmax=100, colorscale=scale,
+                                         showscale=True,
+                                         colorbar=dict(title=dict(text=bar_title, side="top"),
+                                                       orientation="h", x=0.5, xanchor="center", y=-0.02, yanchor="top",
+                                                       ticksuffix="%", thickness=10, len=0.7, outlinewidth=0))))
+    fig.update_layout(
+        **BASE_LAYOUT, height=600, margin=dict(l=0, r=0, t=0, b=70),
+        xaxis=dict(visible=False, fixedrange=True),
+        yaxis=dict(visible=False, fixedrange=True, scaleanchor="x", scaleratio=1 / np.cos(np.radians(46.3))),
+        hovermode="closest",
+    )
+    return fig
+
+
+map1_values = {}
+for name in mn_names:
     if name in by_name.index:
         r = by_name.loc[name]
-        color = sample_colorscale(SCALE, r["share_on_wells"] / 100)[0]
-        tip = (f"<b>{name} County</b><br>{r['share_on_wells']:.0f}% of people served by well systems<br>"
-               f"{int(r['systems'])} community systems, {int(r['people']):,} people<br>"
-               f"{int(r['with_violation'])} with a health-based violation (5 yrs)")
-    else:
-        color = NO_DATA
-        tip = f"<b>{name} County</b><br>No active community water system"
-    c1.add_trace(go.Scatter(x=xs, y=ys, fill="toself", fillcolor=color, mode="lines",
-                            line=dict(color="white", width=0.8), hoveron="fills",
-                            text=tip, hoverinfo="text", showlegend=False))
-# colorbar only (one invisible point carries the scale)
-c1.add_trace(go.Scatter(x=[-94], y=[46], mode="markers", hoverinfo="skip", showlegend=False,
-                        marker=dict(size=0.1, opacity=0, color=[0], cmin=0, cmax=100, colorscale=SCALE,
-                                    showscale=True,
-                                    colorbar=dict(title=dict(text="% of people on well systems", side="top"),
-                                                  orientation="h", x=0.5, xanchor="center", y=-0.02, yanchor="top",
-                                                  ticksuffix="%", thickness=10, len=0.7, outlinewidth=0))))
-mid_lat = 46.3
-c1.update_layout(
-    **BASE_LAYOUT, height=600, margin=dict(l=0, r=0, t=0, b=70),
-    xaxis=dict(visible=False, fixedrange=True),
-    yaxis=dict(visible=False, fixedrange=True, scaleanchor="x", scaleratio=1 / np.cos(np.radians(mid_lat))),
-    hovermode="closest",
-)
+        map1_values[name] = (r["share_on_wells"],
+            f"<b>{name} County</b><br>{r['share_on_wells']:.0f}% of people served by well systems<br>"
+            f"{int(r['systems'])} community systems, {int(r['people']):,} people<br>"
+            f"{int(r['with_violation'])} with a health-based violation (5 yrs)")
+c1 = draw_map(map1_values, SCALE, "% of people on well systems")
+
+# ---------- chart 4: people not on a community system (mostly private wells) ----------
+pw = pd.read_csv(ROOT / "output" / "mn_private_wells.csv")
+GREEN_RAMP = ["#f1f7f4", "#c8e6d6", "#8fcbae", "#4ea883", "#22805c", "#0c573d"]
+SCALE_PW = [[i / (len(GREEN_RAMP) - 1), c] for i, c in enumerate(GREEN_RAMP)]
+map4_values = {}
+for _, r in pw.iterrows():
+    note = "<br><i>Set to 0: water systems here also serve other counties</i>" if r["served_exceeds_population"] else ""
+    map4_values[r["county"]] = (r["pct_not_on_community"],
+        f"<b>{r['county']} County</b><br>{r['pct_not_on_community']:.0f}% not on a community system<br>"
+        f"about {int(r['est_not_on_community']):,} of {int(r['population_2025']):,} people{note}")
+c4 = draw_map(map4_values, SCALE_PW, "% of people not on a community water system")
+pw_total = int(pw["est_not_on_community"].sum())
+pw_pop = int(pw["population_2025"].sum())
+pw_pct = 100 * pw_total / pw_pop
+pw_top_share = pw.nlargest(3, "pct_not_on_community")
+pw_top_people = pw.nlargest(1, "est_not_on_community").iloc[0]
+pw_n_majority = int((pw["pct_not_on_community"] >= 50).sum())
+pw_flagged = ", ".join(sorted(pw.loc[pw["served_exceeds_population"], "county"]))
 
 # ---------- chart 2: every system as a dot ----------
 order = ["Groundwater (wells)", "Groundwater influenced by surface water"]
@@ -161,7 +189,7 @@ for label, mask, color, size, symbol in [
 for s_ in order:
     top = centers[s_] - spread[s_] - 0.12
     c2.add_annotation(x=0, xref="paper", y=top, yref="y", text=f"<b>{short[s_]}</b>", showarrow=False,
-                      xanchor="left", yanchor="bottom", font=dict(size=12, color=INK))
+                      xanchor="left", yanchor="bottom", font=dict(size=12, color=INK), bgcolor="white")
 c2.add_vline(x=SMALL, line=dict(color=MUTED, width=1, dash="dot"))
 c2.add_annotation(x=np.log10(SMALL), y=max(centers.values()) + 0.42, text=f" {SMALL} people",
                   showarrow=False, xanchor="left", font=dict(color=MUTED, size=12))
@@ -248,6 +276,7 @@ html = f"""<!DOCTYPE html>
     <div class="stat"><b>{n_systems:,}</b><span>active community water systems</span></div>
     <div class="stat"><b>{pct_systems_wells:.0f}%</b><span>of those systems run on wells</span></div>
     <div class="stat"><b>{n_small:,}</b><span>serve fewer than {SMALL} people</span></div>
+    <div class="stat"><b>~{pw_total/1e6:.1f}M</b><span>Minnesotans not on a community system, mostly private wells</span></div>
   </div>
 </div></header>
 <main>
@@ -283,8 +312,27 @@ html = f"""<!DOCTYPE html>
      depends on testing and reporting, so this measures what's on the record, not water quality directly.</p>
 </section>
 
+<section>
+  <div class="num">04</div>
+  <h2>About 1 in 5 Minnesotans aren't on a community system at all</h2>
+  <p>Subtracting the people community systems serve from each county's population leaves about
+     <b>{pw_total:,}</b> people ({pw_pct:.0f}%) who get water some other way, mostly private wells.
+     Federal drinking water rules don't cover private wells, so testing is up to the owner. That estimate lines up
+     with the Minnesota Department of Health's own figure of about 1.2 million private well users.</p>
+  <p>In <b>{pw_n_majority}</b> counties, at least half the people are off community systems. The highest shares are
+     {pw_top_share.iloc[0]["county"]} ({pw_top_share.iloc[0]["pct_not_on_community"]:.0f}%),
+     {pw_top_share.iloc[1]["county"]} ({pw_top_share.iloc[1]["pct_not_on_community"]:.0f}%) and
+     {pw_top_share.iloc[2]["county"]} ({pw_top_share.iloc[2]["pct_not_on_community"]:.0f}%). The most people are in
+     {pw_top_people["county"]} County, about {int(pw_top_people["est_not_on_community"]):,}.</p>
+  <div class="chart">{div(c4, "wells-map")}</div>
+  <p class="note">Estimate: Census 2025 county population minus people served by community systems. Some of these people
+     are on small non-community systems, not private wells. Each system counts in one home county, so where systems
+     serve across county lines the estimate is set to 0 ({pw_flagged}). Tribal systems have no county in the EPA data
+     and aren't subtracted.</p>
+</section>
+
 <footer>
-  Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files).
+  Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files); U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the 1.2 million private well users figure.
   Built with DuckDB SQL and Python/Plotly. Code and method:
   <a href="https://github.com/louiserosenbaum/US-water-access">github.com/louiserosenbaum/US-water-access</a>.
   &middot; Louise Rosenbaum

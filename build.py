@@ -56,5 +56,20 @@ con.sql("""
 
 con.execute("COPY mn_systems_with_county TO 'output/mn_systems.csv' (HEADER)")
 con.execute("COPY mn_county_summary TO 'output/mn_county_summary.csv' (HEADER)")
+print("People not on a community water system (mostly private wells), by county:")
+con.sql("""
+    SELECT county, population_2025, community_served, est_not_on_community, pct_not_on_community
+    FROM mn_private_wells
+    ORDER BY est_not_on_community DESC
+    LIMIT 10
+""").show()
+con.sql("""
+    SELECT SUM(population_2025)      AS mn_population,
+           SUM(est_not_on_community) AS est_not_on_community,
+           ROUND(100.0 * SUM(est_not_on_community) / SUM(population_2025), 1) AS pct
+    FROM mn_private_wells
+""").show()
+
 con.execute("COPY mn_system_violations TO 'output/mn_system_violations.csv' (HEADER)")
-print("Wrote output/mn_systems.csv, mn_county_summary.csv, mn_system_violations.csv")
+con.execute("COPY mn_private_wells TO 'output/mn_private_wells.csv' (HEADER)")
+print("Wrote output/mn_systems.csv, mn_county_summary.csv, mn_system_violations.csv, mn_private_wells.csv")
