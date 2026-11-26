@@ -629,21 +629,25 @@ EXPLORER_JS = """
   }
 
   function drawStrip() {
-    const L = layer(), idx = [], xs = [], ys = [], cs = [], tt = [], sz = [], ln = [];
-    D.geom.forEach((g, i) => {
+    const L = layer(), idx = [], xs = [], ys = [], cs = [], tt = [], sz = [], ln = [], lc = [];
+    const maxPop = Math.max(...D.profiles.map(P => P.pop || 0)) || 1;
+    // biggest counties first, so small dots draw on top and stay clickable
+    const order = D.geom.map((g, i) => i).sort((a, b) => (D.profiles[b].pop || 0) - (D.profiles[a].pop || 0));
+    order.forEach(i => {
       const v = L.values[i]; if (v === null) return;
       idx.push(i); xs.push(L.log ? Math.max(v, 1) : v);
       ys.push(((i * 37) % 11 - 5) / 10);          // fixed small spread so dots don't overlap
       cs.push(L.colors[i]); tt.push(L.tips[i]);
-      sz.push(i === st.sel ? 16 : 11); ln.push(i === st.sel ? 2.5 : 0.8);
+      const r = 6 + 26 * Math.sqrt((D.profiles[i].pop || 0) / maxPop);   // area grows with population
+      sz.push(i === st.sel ? r + 4 : r); ln.push(i === st.sel ? 2.5 : 0.8); lc.push(i === st.sel ? INK : 'rgba(31,41,51,0.35)');
     });
-    const lay = Object.assign(baseLayout(110), {
-      margin: {l: 10, r: 10, t: 8, b: 30},
+    const lay = Object.assign(baseLayout(130), {
+      margin: {l: 16, r: 16, t: 14, b: 30},
       xaxis: {type: L.log ? 'log' : 'linear', fixedrange: true, gridcolor: '#eceff2', zeroline: false},
       yaxis: {visible: false, fixedrange: true, range: [-1, 1]}
     });
     Plotly.react(stripEl, [{type: 'scatter', x: xs, y: ys, mode: 'markers', customdata: idx, text: tt, hoverinfo: 'text',
-      marker: {size: sz, color: cs, line: {color: INK, width: ln}}}], lay, {displayModeBar: false, responsive: true});
+      marker: {size: sz, color: cs, opacity: 0.9, line: {color: lc, width: ln}}}], lay, {displayModeBar: false, responsive: true});
   }
 
   function overview() {
@@ -697,7 +701,7 @@ EXPLORER_JS = """
     }
     document.getElementById('ex-strip-wrap').style.display = L.nostrip ? 'none' : 'block';
     document.getElementById('ex-spikes-wrap').style.visibility = L.spikes ? 'visible' : 'hidden';
-    document.getElementById('ex-strip-title').textContent = 'Every county by ' + L.rank_label + '. Click a dot to open that county.';
+    document.getElementById('ex-strip-title').textContent = 'Every county by ' + L.rank_label + '. Bigger dots are counties with more people. Click a dot to open that county.';
   }
 
   function render() { renderKey(); drawMap(); drawStrip(); renderPanel();
