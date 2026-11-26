@@ -498,13 +498,13 @@ DRAIN_JS = """
     attributionControl: false,
     style: {version: 8, sources: {}, layers: [{id: 'bg', type: 'background', paint: {'background-color': BG}}]}
   });
-  map.addControl(new maplibregl.NavigationControl({visualizePitch: true}), 'top-right');
+  map.addControl(new maplibregl.NavigationControl({showCompass: false}), 'top-right');
+  map.dragRotate.disable(); map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.AttributionControl({compact: true}), 'bottom-left');
 
   map.on('load', () => {
     el.querySelectorAll('.maplibregl-compact-show').forEach(x => x.classList.remove('maplibregl-compact-show'));
     map.addSource('dem', DEM);
-    map.addSource('dem3d', Object.assign({}, DEM));
     map.addLayer({id: 'relief', type: 'hillshade', source: 'dem', paint: {
       'hillshade-exaggeration': 0.85, 'hillshade-shadow-color': '#2b2b2b',
       'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': '#4a4a4a'}});
@@ -548,32 +548,8 @@ DRAIN_JS = """
     });
   });
 
-  function go3d() {
-    // work out the whole-state view before turning terrain on, and drop the pan limit while in 3D:
-    // MapLibre's pan limit and 3D terrain can fight each other and snap the map to full zoom
-    map.setTerrain(null);
-    map.jumpTo({pitch: 0, bearing: 0});
-    const cam = map.cameraForBounds([[b[0], b[1]], [b[2], b[3]]], {padding: 30});
-    map.setMaxBounds(null);
-    map.jumpTo({center: cam.center, zoom: cam.zoom});
-    map.setTerrain({source: 'dem3d', exaggeration: 8});
-    map.easeTo({center: cam.center, zoom: cam.zoom + 0.3, pitch: 55, bearing: -12, duration: 1600});
-  }
-  function goFlat() {
-    map.setTerrain(null);
-    map.jumpTo({pitch: 0, bearing: 0});
-    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], {padding: 16, duration: 0});
-    map.setMaxBounds(LIMIT);
-  }
-  const btn = document.getElementById('drain-3d');
-  btn.onclick = () => {
-    const on = btn.getAttribute('aria-pressed') !== 'true';
-    btn.setAttribute('aria-pressed', on);
-    btn.textContent = on ? 'Flat view' : 'Tilt in 3D';
-    on ? go3d() : goFlat();
-  };
   document.getElementById('drain-reset').onclick = () =>
-    btn.getAttribute('aria-pressed') === 'true' ? go3d() : goFlat();
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], {padding: 16});
 })();
 </script>
 """
@@ -892,7 +868,6 @@ html = f"""<!DOCTYPE html>
      <b>{surf_pct["gulf"]:.0f}%</b> are on water headed for the Gulf, {surf_pct["atlantic"]:.0f}% for the Atlantic
      and {surf_pct["hudson"]:.0f}% for Hudson Bay.</p>
   <div class="dm-tools">
-    <button class="ex-btn" id="drain-3d" aria-pressed="false">Tilt in 3D</button>
     <button class="ex-btn" id="drain-reset">Reset view</button>
     <div class="ex-legend" style="display:flex">{"".join(f'<span><i style="background:{c}"></i>{n}</span>' for n, c in drain_map["legend"])}</div>
   </div>
