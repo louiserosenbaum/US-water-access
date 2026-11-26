@@ -295,8 +295,54 @@ if hd is not None:
         f"mostly state groundwater monitoring wells. That's raw groundwater, not what comes out of a city tap. "
         f"Counties with fewer than 5 wells are gray. Very hard = over 180 mg/L."))
 
-# Spikes: a column on each county whose height is an absolute count, so big and small places
-# can be compared at a glance (the color shows the rate, the spike shows how many people).
+# 6. Where it drains: Minnesota sits on three continental divides, so its rivers end in three different seas.
+BASINS = {
+    "gulf": ("Gulf of Mexico", "#1c5a99", "rgba(28,90,153,0.28)"),
+    "hudson": ("Hudson Bay", "#2f9461", "rgba(47,148,97,0.28)"),
+    "atlantic": ("Atlantic, via Lake Superior", "#8e4fb8", "rgba(142,79,184,0.25)"),
+}
+rivers = json.loads((ROOT / "data" / "geo" / "mn_rivers.json").read_text())
+# Surface-water systems (rivers and lakes) by where that water drains, using each system's home county.
+# Approximate: it assumes a county's surface systems draw from that county's main basin.
+COUNTY_BASIN = {"Clay": "hudson", "Otter Tail": "hudson", "Polk": "hudson", "Pennington": "hudson",
+                "Koochiching": "hudson", "St. Louis": "atlantic", "Lake": "atlantic", "Cook": "atlantic"}
+surf = sys_df[~sys_df["on_wells"] & sys_df["county"].notna()]
+surf_by = surf.groupby(surf["county"].map(lambda c: COUNTY_BASIN.get(c, "gulf")))["population_served"].sum()
+surf_total = int(surf_by.sum())
+surf_pct = {k: 100 * surf_by.get(k, 0) / surf_total for k in BASINS}
+overlay = {"rivers": [], "lakes": []}
+for r in rivers["rivers"]:
+    w = 3.4 if r["rank"] <= 5 else 2.6 if r["rank"] <= 7 else 1.9 if r["rank"] <= 8 else 1.4 if r["rank"] <= 11 else 1.1
+    overlay["rivers"].append({"x": r["x"], "y": r["y"], "c": BASINS[r["basin"]][1], "w": w,
+                              "t": f"<b>{r['name']} River</b><br>drains to {BASINS[r['basin']][0]}"})
+for k in rivers["lakes"]:
+    overlay["lakes"].append({"x": k["x"], "y": k["y"], "c": BASINS[k["basin"]][2], "lc": BASINS[k["basin"]][1],
+                             "t": f"<b>{k['name']}</b><br>drains to {BASINS[k['basin']][0]}"})
+overlay["arrows"] = [  # arrowhead where the water leaves the state, label at the tail: [x, y, tail dx, tail dy (px), label, color]
+    [-97.1, 48.98, 0, 55, "to Hudson Bay", BASINS["hudson"][1]],
+    [-91.22, 43.5, 0, -55, "to the Gulf of Mexico", BASINS["gulf"][1]],
+    [-89.75, 47.05, -75, 0, "to the Atlantic", BASINS["atlantic"][1]],
+]
+overlay["marker"] = [-92.93, 47.46, "Hill of Three Waters"]
+drain = {
+    "key": "drainage", "label": "Where it drains", "values": [None] * len(geom), "log": False,
+    "colors": ["#eef1f4"] * len(geom),
+    "tips": [f"<b>{g['name']} County</b>" for g in geom], "gradient": "", "lo": "", "hi": "",
+    "title": "Three seas, one state",
+    "body": (f"Rain that falls in Minnesota ends up in one of three places: the <b>Gulf of Mexico</b> by the Mississippi, "
+             f"<b>Hudson Bay</b> by the Red and Rainy rivers, or the <b>Atlantic</b> by Lake Superior. The three divides meet "
+             f"at the Hill of Three Waters near Hibbing. Nothing flows in from other states; it all flows out."),
+    "top": ("Of the ~" + f"{surf_total/1e6:.1f}" + " million people whose community system draws from a river or lake:<ul>"
+            + "".join(f"<li>{BASINS[k][0]}: {surf_pct[k]:.0f}%</li>" for k in ("gulf", "atlantic", "hudson")) + "</ul>"),
+    "note": ("Rivers and lakes: Natural Earth, major rivers only. Line width shows river size. Drinking water shares go by "
+             "each system's home county, so they're approximate. Wells aren't counted here."),
+    "overlay": overlay, "nostrip": True,
+    "legend": [[BASINS[k][0], BASINS[k][1]] for k in ("gulf", "hudson", "atlantic")],
+}
+layers.append(drain)
+
+# Bars: a column on each county whose height is an absolute count, so big and small places
+# can be compared at a glance (the color shows the rate, the bar shows how many).
 people_served = {n: int(by_name.loc[n, "people"]) for n in by_name.index}
 spike_defs = {
     "source": ("people on community systems", people_served),
@@ -311,6 +357,7 @@ rank_labels = {"source": "% of people on well systems", "private": "% of people 
                "hardness": "median hardness (mg/L)"}
 for L in layers:
     L["rank_label"] = rank_labels.get(L["key"], L["label"])
+    L.setdefault("overlay", None)
     if L["key"] in spike_defs:
         lab, vals = spike_defs[L["key"]]
         L["spike_label"] = lab
@@ -458,25 +505,48 @@ EXPLORER_JS = """
       const vmax = Math.max(...L.spikes), sx = [], sy = [], tx = [], ty = [], tt = [], ti = [];
       D.geom.forEach((g, i) => {
         const v = L.spikes[i]; if (!v) return;
-        const h = 1.6 * v / vmax, w = 0.09;
-        sx.push(g.cx - w, g.cx, g.cx + w, g.cx - w, null);
-        sy.push(g.cy, g.cy + h, g.cy, g.cy, null);
+        const h = 1.6 * v / vmax, w = 0.055;
+        if (h < 0.04) return;
+        sx.push(g.cx - w, g.cx - w, g.cx + w, g.cx + w, g.cx - w, null);
+        sy.push(g.cy, g.cy + h, g.cy + h, g.cy, g.cy, null);
         tx.push(g.cx); ty.push(g.cy + h); ti.push(i);
         tt.push('<b>' + g.name + ' County</b><br>' + v.toLocaleString() + ' ' + L.spike_label);
       });
-      t.push({type: 'scatter', x: sx, y: sy, fill: 'toself', fillcolor: 'rgba(31,41,51,0.72)', mode: 'lines',
-              line: {color: 'white', width: 0.6}, hoverinfo: 'skip'});
+      t.push({type: 'scatter', x: sx, y: sy, fill: 'toself', fillcolor: 'rgba(31,41,51,0.8)', mode: 'lines',
+              line: {color: 'rgba(31,41,51,0.8)', width: 0.5}, hoverinfo: 'skip'});
       t.push({type: 'scatter', x: tx, y: ty, mode: 'markers', marker: {size: 9, color: 'rgba(0,0,0,0)'},
               text: tt, hoverinfo: 'text', customdata: ti});
     }
+    if (L.overlay) {
+      const O = L.overlay;
+      O.lakes.forEach(k => t.push({type: 'scatter', x: k.x, y: k.y, fill: 'toself', fillcolor: k.c, mode: 'lines',
+        line: {color: k.lc, width: 0.8}, hoveron: 'fills', text: k.t, hoverinfo: 'text'}));
+      O.rivers.forEach(r => t.push({type: 'scatter', x: r.x, y: r.y, mode: 'lines',
+        line: {color: r.c, width: r.w, shape: 'spline', smoothing: 0.6}, text: r.t, hoverinfo: 'text'}));
+      t.push({type: 'scatter', x: [O.marker[0]], y: [O.marker[1]], mode: 'markers',
+        marker: {size: 11, color: 'white', line: {color: INK, width: 2}}, hoverinfo: 'text',
+        text: '<b>' + O.marker[2] + '</b><br>Near Hibbing. Rain here can reach<br>all three seas.'});
+    }
     return t;
+  }
+
+  function overlayNotes(L) {
+    if (!L.overlay) return [];
+    const O = L.overlay;
+    const a = O.arrows.map(r => ({x: r[0], y: r[1], ax: r[2], ay: r[3], text: '<b>' + r[4] + '</b>', showarrow: true,
+      arrowhead: 2, arrowsize: 1.4, arrowwidth: 2.5, arrowcolor: r[5], font: {size: 12, color: r[5]},
+      bgcolor: 'rgba(255,255,255,0.85)', standoff: 2}));
+    a.push({x: O.marker[0], y: O.marker[1], text: O.marker[2], showarrow: false, xanchor: 'left', xshift: 9,
+            font: {size: 11, color: INK}, bgcolor: 'rgba(255,255,255,0.8)'});
+    return a;
   }
 
   function drawMap() {
     const L = layer(), w = mapEl.clientWidth || 500;
     const lay = Object.assign(baseLayout(Math.min(540, Math.round(w * 1.1))), {
       xaxis: {visible: false, fixedrange: true},
-      yaxis: {visible: false, fixedrange: true, scaleanchor: 'x', scaleratio: 1 / Math.cos(46.3 * Math.PI / 180)}
+      yaxis: {visible: false, fixedrange: true, scaleanchor: 'x', scaleratio: 1 / Math.cos(46.3 * Math.PI / 180)},
+      annotations: overlayNotes(L)
     });
     Plotly.react(mapEl, mapTraces(L), lay, {displayModeBar: false, responsive: true});
   }
@@ -502,7 +572,7 @@ EXPLORER_JS = """
   function overview() {
     const L = layer();
     return '<h3>' + L.title + '</h3><p>' + L.body + '</p>' + L.top +
-           (L.spikes ? '<p class="note">Spikes show the number of ' + L.spike_label + '.</p>' : '') +
+           (L.spikes ? '<p class="note">Bars show the number of ' + L.spike_label + '.</p>' : '') +
            '<p class="note">' + esc(L.note) + '</p><p class="note"><b>Click any county</b> for its full profile.</p>';
   }
 
@@ -538,13 +608,22 @@ EXPLORER_JS = """
 
   function renderKey() {
     const L = layer();
-    document.getElementById('ex-bar').style.background = L.gradient;
-    document.getElementById('ex-lo').textContent = L.lo;
-    document.getElementById('ex-hi').textContent = L.hi;
+    const leg = document.getElementById('ex-legend'), grad = document.getElementById('ex-grad');
+    if (L.legend) {
+      leg.innerHTML = L.legend.map(l => '<span><i style="background:' + l[1] + '"></i>' + esc(l[0]) + '</span>').join('');
+      leg.style.display = 'flex'; grad.style.display = 'none';
+    } else {
+      leg.style.display = 'none'; grad.style.display = 'block';
+      document.getElementById('ex-bar').style.background = L.gradient;
+      document.getElementById('ex-lo').textContent = L.lo;
+      document.getElementById('ex-hi').textContent = L.hi;
+    }
+    document.getElementById('ex-strip-wrap').style.display = L.nostrip ? 'none' : 'block';
+    document.getElementById('ex-spikes-wrap').style.visibility = L.spikes ? 'visible' : 'hidden';
     document.getElementById('ex-strip-title').textContent = 'Every county by ' + L.rank_label + '. Click a dot to open that county.';
   }
 
-  function render() { drawMap(); drawStrip(); renderPanel(); renderKey();
+  function render() { renderKey(); drawMap(); drawStrip(); renderPanel();
     document.querySelectorAll('.ex-btn').forEach(b => b.setAttribute('aria-pressed', b.dataset.key === st.key)); }
   function select(i) { st.sel = i; render(); }
 
@@ -619,6 +698,9 @@ html = f"""<!DOCTYPE html>
   .ex-key {{ margin:6px 12px 4px; }}
   .ex-key .bar {{ height:10px; border-radius:5px; }}
   .ex-key .ends {{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:3px; }}
+  .ex-legend {{ display:none; flex-wrap:wrap; gap:6px 16px; font-size:13px; color:var(--ink); }}
+  .ex-legend span {{ display:inline-flex; align-items:center; gap:6px; }}
+  .ex-legend i {{ display:inline-block; width:18px; height:4px; border-radius:2px; }}
   .ex-controls {{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; }}
   .ex-tools {{ display:flex; gap:12px; align-items:center; }}
   #ex-search {{ font:inherit; font-size:14px; padding:7px 12px; border:1px solid #cfd6dd; border-radius:8px; width:170px; }}
@@ -657,25 +739,26 @@ html = f"""<!DOCTYPE html>
 <section>
   <div class="num">01</div>
   <h2>Explore the map</h2>
-  <p>Pick a layer to recolor Minnesota's 87 counties. Color shows the rate; the dark spikes show how many people,
-     so a big county and a small one can be compared at a glance. Click any county for its full profile.</p>
+  <p>Pick a layer to recolor Minnesota's 87 counties. Color shows the rate; the dark bars show how many,
+     so a big county and a small one can be compared at a glance. <b>Where it drains</b> shows the rivers instead. Click any county for its full profile.</p>
   <div class="ex-controls">
     <div class="ex-buttons" id="ex-buttons"></div>
     <div class="ex-tools">
       <input id="ex-search" list="ex-county-list" placeholder="Find your county" aria-label="Find your county">
       <datalist id="ex-county-list"></datalist>
-      <label class="ex-check"><input type="checkbox" id="ex-spikes" checked> Spikes</label>
+      <label class="ex-check" id="ex-spikes-wrap"><input type="checkbox" id="ex-spikes" checked> Bars</label>
     </div>
   </div>
   <div class="ex-grid">
     <div class="chart" style="margin-top:8px">
       <div id="explorer-map"></div>
-      <div class="ex-key"><div class="bar" id="ex-bar"></div>
+      <div class="ex-key"><div id="ex-grad"><div class="bar" id="ex-bar"></div>
         <div class="ends"><span id="ex-lo"></span><span id="ex-hi"></span></div></div>
+        <div class="ex-legend" id="ex-legend"></div></div>
     </div>
     <div class="ex-panel" id="ex-panel"></div>
   </div>
-  <div class="chart">
+  <div class="chart" id="ex-strip-wrap">
     <div class="note" id="ex-strip-title" style="margin:2px 8px 0"></div>
     <div id="explorer-strip"></div>
   </div>
@@ -723,7 +806,7 @@ html = f"""<!DOCTYPE html>
 </section>
 
 <footer>
-  Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files); U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the 1.2 million private well users figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water, used to calculate hardness.
+  Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files); U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the 1.2 million private well users figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water, used to calculate hardness; Natural Earth for rivers and lakes.
   Built with DuckDB SQL and Python/Plotly. Code and method:
   <a href="https://github.com/louiserosenbaum/US-water-access">github.com/louiserosenbaum/US-water-access</a>.
   &middot; Louise Rosenbaum
