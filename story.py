@@ -271,18 +271,29 @@ layers.append(build_layer(
 
 # 5. Hardness (only if build.py produced it)
 hard_path = ROOT / "output" / "mn_hardness.csv"
-if hard_path.exists():
-    hd = pd.read_csv(hard_path).set_index("county")
-    v = hd["median_hardness_mg_l"].to_dict()
-    t = {n: (f"<b>{n} County</b><br>median {r['median_hardness_mg_l']:.0f} mg/L as CaCO3 ({r['hardness_class']})<br>"
-             f"{int(r['wells'])} wells, {int(r['samples'])} samples since 2010") for n, r in hd.iterrows()}
+hd = pd.read_csv(hard_path).set_index("county") if hard_path.exists() else None
+if hd is not None:
+    ok = hd[hd["enough_wells"]]
+    v = ok["median_hardness_mg_l"].to_dict()
+    t = {}
+    for n, r in hd.iterrows():
+        if r["enough_wells"]:
+            t[n] = (f"<b>{n} County</b><br>median {r['median_hardness_mg_l']:.0f} mg/L ({r['hardness_class']})<br>"
+                    f"{int(r['wells'])} wells sampled since 2010")
+        else:
+            t[n] = f"<b>{n} County</b><br>Only {int(r['wells'])} well(s) sampled, too few to map"
+    n_vh = int((ok["hardness_class"] == "very hard").sum())
     layers.append(build_layer(
-        "hardness", "Hardness", TEAL_RAMP, v, t, 0, 400, "soft", "very hard (400+ mg/L)",
+        "hardness", "Hardness", TEAL_RAMP, v, t, 60, 600, "60 (soft)", "600+ mg/L",
         "How hard the groundwater is",
-        "Median hardness of groundwater samples from wells, by county. Hard water isn't a health risk and isn't regulated, "
-        "but it's why so many Minnesota homes have water softeners.",
-        "Hardest:<ul>" + top3(v.items(), lambda x: f"{x:.0f} mg/L") + "</ul>",
-        "Water Quality Portal well samples, 2010 to now. USGS classes: soft under 60, moderate 61 to 120, hard 121 to 180, very hard over 180 mg/L."))
+        f"Hardness is calcium and magnesium dissolved from rock. In <b>{n_vh} of {len(ok)}</b> counties with enough data, "
+        f"the typical well is <b>very hard</b> (over 180 mg/L). It's hardest in the southwest and softest up north, where "
+        f"the bedrock is granite instead of limestone. Hard water isn't a health risk and isn't regulated, but it's why so "
+        f"many Minnesota homes have softeners.",
+        "Hardest:<ul>" + top3(v.items(), lambda x: f"{x:,.0f} mg/L") + "</ul>",
+        f"Calculated from calcium and magnesium in {int(hd['wells'].sum()):,} wells (Water Quality Portal, 2010 to 2025), "
+        f"mostly state groundwater monitoring wells. That's raw groundwater, not what comes out of a city tap. "
+        f"Counties with fewer than 5 wells are gray. Very hard = over 180 mg/L."))
 
 # Spikes: a column on each county whose height is an absolute count, so big and small places
 # can be compared at a glance (the color shows the rate, the spike shows how many people).
@@ -293,6 +304,8 @@ spike_defs = {
     "quality": ("systems with a health-based violation", {n: int(by_name.loc[n, "with_violation"]) for n in by_name.index}),
     "population": ("people (2025)", {n: int(x) for n, x in pop.items()}),
 }
+if hd is not None:
+    spike_defs["hardness"] = ("wells sampled", {n: int(r["wells"]) for n, r in hd.iterrows()})
 rank_labels = {"source": "% of people on well systems", "private": "% of people off public water",
                "quality": "% of systems with a health violation", "population": "people per square mile (log scale)",
                "hardness": "median hardness (mg/L)"}
@@ -310,6 +323,8 @@ state = {
     "quality": 100 * sys_df["has_violation"].mean(),
     "density": pw_pop / sum(area.values()),
 }
+if hd is not None:
+    state["hardness"] = float(hd.loc[hd["enough_wells"], "median_hardness_mg_l"].median())
 sys_cols = sys_df.sort_values("population_served", ascending=False)
 profiles = []
 for g in geom:
@@ -330,6 +345,10 @@ for g in geom:
         dens = pop[n] / area[n]
         f = lambda d: (np.log10(max(d, 2)) - np.log10(2)) / (np.log10(3000) - np.log10(2))
         rows.append(["People per sq mile (log scale)", f"{dens:,.0f}", min(f(dens), 1), f(state["density"]), f"state {state['density']:.0f}"])
+    if hd is not None and n in hd.index and hd.loc[n, "enough_wells"]:
+        h = hd.loc[n, "median_hardness_mg_l"]
+        rows.append(["Hardness (mg/L)", f"{h:,.0f} ({hd.loc[n, 'hardness_class']})", min(h / 600, 1),
+                     state["hardness"] / 600, f"typical county {state['hardness']:.0f}"])
     systems = [[r.system_name, int(r.population_served), "Wells" if r.on_wells else ("Surface water" if str(r.source_type).startswith("Surface") else "Mixed"),
                 int(r.health_violations_5yr)]
                for r in sys_cols[sys_cols["county"] == n].itertuples()]
@@ -704,7 +723,7 @@ html = f"""<!DOCTYPE html>
 </section>
 
 <footer>
-  Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files); U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the 1.2 million private well users figure.
+  Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files); U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the 1.2 million private well users figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water, used to calculate hardness.
   Built with DuckDB SQL and Python/Plotly. Code and method:
   <a href="https://github.com/louiserosenbaum/US-water-access">github.com/louiserosenbaum/US-water-access</a>.
   &middot; Louise Rosenbaum

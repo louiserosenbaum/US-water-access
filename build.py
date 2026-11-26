@@ -3,7 +3,12 @@ from pathlib import Path
 import duckdb
 
 con = duckdb.connect("water.duckdb")
+HARDNESS_RAW = [Path("data/raw/wqp_ca_mg_results.csv"), Path("data/raw/wqp_stations.csv")]
+have_hardness = all(p.exists() for p in HARDNESS_RAW)
 for sql_file in sorted(Path("sql").glob("*.sql")):
+    if sql_file.name == "05_hardness.sql" and not have_hardness:
+        print("Skipping 05_hardness.sql (Water Quality Portal files not in data/raw)")
+        continue
     print(f"Running {sql_file.name}")
     con.execute(sql_file.read_text())
 
@@ -73,3 +78,18 @@ con.sql("""
 con.execute("COPY mn_system_violations TO 'output/mn_system_violations.csv' (HEADER)")
 con.execute("COPY mn_private_wells TO 'output/mn_private_wells.csv' (HEADER)")
 print("Wrote output/mn_systems.csv, mn_county_summary.csv, mn_system_violations.csv, mn_private_wells.csv")
+
+if have_hardness:
+    print("\nGroundwater hardness by county (mg/L as CaCO3), hardest first:")
+    con.sql("""
+        SELECT county, median_hardness_mg_l, hardness_class, wells
+        FROM mn_hardness WHERE enough_wells
+        ORDER BY median_hardness_mg_l DESC LIMIT 10
+    """).show()
+    con.sql("""
+        SELECT COUNT(*) AS counties, SUM(enough_wells::INT) AS with_5plus_wells, SUM(wells) AS wells,
+               ROUND(MEDIAN(median_hardness_mg_l)) AS median_county
+        FROM mn_hardness
+    """).show()
+    con.execute("COPY (SELECT * FROM mn_hardness ORDER BY county) TO 'output/mn_hardness.csv' (HEADER)")
+    print("Wrote output/mn_hardness.csv")

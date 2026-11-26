@@ -1,0 +1,67 @@
+county,median_hardness_mg_l,hardness_class,wells,samples,enough_wells
+Aitkin,182.0,very hard,91,106,true
+Anoka,200.0,very hard,127,541,true
+Becker,318.0,very hard,89,112,true
+Beltrami,247.0,very hard,17,211,true
+Benton,199.0,very hard,91,99,true
+Blue Earth,404.0,very hard,100,224,true
+Brown,495.0,very hard,89,104,true
+Carlton,162.0,hard,30,131,true
+Carver,406.0,very hard,65,70,true
+Cass,216.0,very hard,100,227,true
+Chisago,250.0,very hard,81,108,true
+Clay,331.0,very hard,93,128,true
+Clearwater,373.0,very hard,3,25,false
+Cottonwood,402.0,very hard,1,1,false
+Crow Wing,142.0,hard,33,325,true
+Dakota,304.0,very hard,134,292,true
+Dodge,268.0,very hard,93,106,true
+Faribault,551.0,very hard,2,14,false
+Fillmore,328.0,very hard,6,8,true
+Goodhue,355.0,very hard,7,23,true
+Hennepin,405.0,very hard,136,432,true
+Houston,253.0,very hard,86,97,true
+Hubbard,260.0,very hard,98,143,true
+Isanti,218.0,very hard,91,105,true
+Itasca,225.0,very hard,13,63,true
+Jackson,1038.0,very hard,1,2,false
+Kanabec,196.0,very hard,87,101,true
+Kandiyohi,376.0,very hard,88,103,true
+Lac qui Parle,599.0,very hard,90,105,true
+Lake,101.0,moderately hard,78,102,true
+Lake of the Woods,181.0,very hard,1,17,false
+Lincoln,1936.0,very hard,2,58,false
+Lyon,1040.0,very hard,1,15,false
+McLeod,389.0,very hard,75,78,true
+Meeker,348.0,very hard,94,108,true
+Mille Lacs,292.0,very hard,3,22,false
+Morrison,227.0,very hard,103,150,true
+Mower,288.0,very hard,7,56,true
+Nicollet,491.0,very hard,94,109,true
+Nobles,1160.0,very hard,68,79,true
+Norman,398.0,very hard,7,11,true
+Olmsted,271.0,very hard,97,163,true
+Otter Tail,332.0,very hard,188,246,true
+Pine,41.0,soft,9,76,true
+Polk,408.0,very hard,2,12,false
+Ramsey,289.0,very hard,23,97,true
+Red Lake,314.0,very hard,1,2,false
+Redwood,562.0,very hard,107,135,true
+Renville,510.0,very hard,98,98,true
+Rice,361.0,very hard,5,27,true
+Rock,387.0,very hard,58,79,true
+Scott,371.0,very hard,8,21,true
+Sherburne,223.0,very hard,126,176,true
+Sibley,476.0,very hard,89,100,true
+St. Louis,148.0,hard,187,313,true
+Stearns,347.0,very hard,21,404,true
+Steele,338.0,very hard,90,105,true
+Todd,296.0,very hard,1,1,false
+Traverse,273.0,very hard,1,1,false
+Wabasha,249.0,very hard,4,27,false
+Wadena,259.0,very hard,95,146,true
+Waseca,376.0,very hard,6,6,true
+Washington,255.0,very hard,144,643,true
+Winona,249.0,very hard,87,118,true
+Wright,379.0,very hard,92,93,true
+Yellow Medicine,627.0,very hard,1,1,false
