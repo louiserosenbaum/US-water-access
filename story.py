@@ -362,6 +362,8 @@ for L in layers:
         lab, vals = spike_defs[L["key"]]
         L["spike_label"] = lab
         L["spikes"] = [vals.get(g["name"], 0) for g in geom]
+        # gold stands out on the dark blue, green, purple and teal maps; the orange map gets dark ink instead
+        L["spike_color"] = "rgba(31,41,51,0.75)" if L["key"] == "quality" else "#f4b740"
 
 # County profiles: every measure for one county next to the state figure, plus its water systems
 state = {
@@ -511,8 +513,8 @@ EXPLORER_JS = """
         tx.push(g.cx); ty.push(g.cy + h); ti.push(i);
         tt.push('<b>' + g.name + ' County</b><br>' + v.toLocaleString() + ' ' + L.spike_label);
       });
-      t.push({type: 'scatter', x: sx, y: sy, fill: 'toself', fillcolor: 'rgba(31,41,51,0.72)', mode: 'lines',
-              line: {color: 'white', width: 0.6}, hoverinfo: 'skip'});
+      t.push({type: 'scatter', x: sx, y: sy, fill: 'toself', fillcolor: L.spike_color, mode: 'lines',
+              line: {color: '#1f2933', width: 0.7}, hoverinfo: 'skip'});
       t.push({type: 'scatter', x: tx, y: ty, mode: 'markers', marker: {size: 9, color: 'rgba(0,0,0,0)'},
               text: tt, hoverinfo: 'text', customdata: ti});
     }
