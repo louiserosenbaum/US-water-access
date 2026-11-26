@@ -329,9 +329,10 @@
     tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
     attribution: 'Relief: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a> &middot; Water: MN DNR'};
   const b = M.bounds;
+  const LIMIT = [[-104, 40], [-82, 52]];
   const map = new maplibregl.Map({
     container: el, bounds: [[b[0], b[1]], [b[2], b[3]]], fitBoundsOptions: {padding: 16},
-    maxBounds: [[-104, 40], [-82, 52]], minZoom: 4.5, maxZoom: 12, cooperativeGestures: true,
+    maxBounds: LIMIT, minZoom: 4.5, maxZoom: 12, cooperativeGestures: true,
     attributionControl: false,
     style: {version: 8, sources: {}, layers: [{id: 'bg', type: 'background', paint: {'background-color': BG}}]}
   });
@@ -385,21 +386,32 @@
     });
   });
 
+  function go3d() {
+    // work out the whole-state view before turning terrain on, and drop the pan limit while in 3D:
+    // MapLibre's pan limit and 3D terrain can fight each other and snap the map to full zoom
+    map.setTerrain(null);
+    map.jumpTo({pitch: 0, bearing: 0});
+    const cam = map.cameraForBounds([[b[0], b[1]], [b[2], b[3]]], {padding: 30});
+    map.setMaxBounds(null);
+    map.jumpTo({center: cam.center, zoom: cam.zoom});
+    map.setTerrain({source: 'dem3d', exaggeration: 8});
+    map.easeTo({center: cam.center, zoom: cam.zoom + 0.3, pitch: 55, bearing: -12, duration: 1600});
+  }
+  function goFlat() {
+    map.setTerrain(null);
+    map.jumpTo({pitch: 0, bearing: 0});
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], {padding: 16, duration: 0});
+    map.setMaxBounds(LIMIT);
+  }
   const btn = document.getElementById('drain-3d');
   btn.onclick = () => {
     const on = btn.getAttribute('aria-pressed') !== 'true';
     btn.setAttribute('aria-pressed', on);
     btn.textContent = on ? 'Flat view' : 'Tilt in 3D';
-    if (on) {
-      map.setTerrain({source: 'dem3d', exaggeration: 10});
-      // pull back to the whole state, then tilt, so the 3D view shows all three basins at once
-      const cam = map.cameraForBounds([[b[0], b[1]], [b[2], b[3]]], {padding: 30});
-      map.easeTo({center: cam.center, zoom: cam.zoom - 0.25, pitch: 55, bearing: -12, duration: 1600});
-    }
-    else { map.easeTo({pitch: 0, bearing: 0, duration: 900}); setTimeout(() => map.setTerrain(null), 900); }
+    on ? go3d() : goFlat();
   };
   document.getElementById('drain-reset').onclick = () =>
-    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], {padding: 16, pitch: map.getPitch(), bearing: map.getBearing()});
+    btn.getAttribute('aria-pressed') === 'true' ? go3d() : goFlat();
 })();
 </script>
 
