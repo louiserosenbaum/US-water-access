@@ -1,14 +1,19 @@
 """Clip Natural Earth rivers and lakes to Minnesota and tag each with where its water ends up.
 
 Natural Earth (public domain, naturalearthdata.com) is downloaded from its GitHub mirror.
-Output: data/geo/mn_rivers.json, used by story.py for the "Where it drains" layer.
-Run once; the output is committed so the story page builds without a download.
+Also builds the zoomable drainage map's shapes: a mask that dims everything outside Minnesota, and
+(if data/geo/mn_basins.geojson is there) the Minnesota DNR basins, each tagged with its sea and its counties.
+Basins come from the MN DNR Watershed Suite map service (Level 02, HUC 04):
+https://enterprise.gisdata.mn.gov/aghost/rest/services/us_mn_state_dnr/geos_dnr_watersheds/MapServer/7
+
+Output: data/geo/mn_rivers.json, used by story.py. Run once; the output is committed so the story
+page builds without a download or shapely.
 """
 import json
 import urllib.request
 from pathlib import Path
 
-from shapely.geometry import box, shape
+from shapely.geometry import box, mapping, shape
 from shapely.ops import unary_union
 
 NE = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/"
@@ -92,6 +97,40 @@ for key in ("lakes", "lakes_na"):
                 continue
             out["lakes"].append({"name": name, "basin": b,
                                  "x": [round(c[0], 3) for c in p.exterior.coords], "y": [round(c[1], 3) for c in p.exterior.coords]})
+
+# Mask: a big box with Minnesota cut out, drawn semi-opaque so the state stands out
+mn_plain = unary_union([shape(f["geometry"]) for f in counties]).simplify(0.003)
+mask = box(-104, 40, -82, 52).difference(mn_plain)
+out["mask"] = mapping(mask)
+out["bounds"] = [round(v, 3) for v in mn_plain.bounds]
+
+# Basins (HUC 04) from MN DNR, tagged with the sea they drain to
+# Plain names for the Minnesota part of each USGS subregion (official name kept as "official")
+FRIENDLY = {"1017": "Missouri: Big Sioux", "1023": "Missouri: Little Sioux", "0710": "Des Moines River",
+            "0702": "Minnesota River", "0708": "Cedar River", "0704": "Southeast: Zumbro, Root and Cannon",
+            "0706": "Upper Iowa River", "0703": "St. Croix River", "0701": "Mississippi Headwaters",
+            "0902": "Red River", "0903": "Rainy River", "0401": "Lake Superior"}
+SEA = {"04": "atlantic", "07": "gulf", "10": "gulf", "09": "hudson"}
+bpath = Path("data/geo/mn_basins.geojson")
+out["basins"] = []
+if bpath.exists():
+    cents = {f["properties"]["NAME"]: shape(f["geometry"]).representative_point() for f in counties}
+    for f in json.loads(bpath.read_text())["features"]:
+        pr = {k.lower(): v for k, v in f["properties"].items()}
+        g = shape(f["geometry"]).buffer(0).simplify(0.004)
+        inside = g.intersection(mn_plain)
+        if inside.is_empty:
+            continue
+        name = FRIENDLY.get(pr["huc_4"], pr["huc_4_name"].title())
+        rp = inside.representative_point()
+        out["basins"].append({
+            "huc4": pr["huc_4"], "name": name, "official": pr["huc_4_name"].title(), "sea": SEA[pr["huc_2"]],
+            "pct_state": round(100 * inside.area / mn_plain.area, 1),
+            "counties": sorted(n for n, c in cents.items() if g.contains(c)),
+            "label": [round(rp.x, 3), round(rp.y, 3)],
+            "geometry": mapping(g),
+        })
+    print(f"{len(out['basins'])} basins:", [(b["name"], b["sea"], b["pct_state"]) for b in out["basins"]])
 
 out["skipped"] = sorted(set(out["skipped"]))
 Path("data/geo/mn_rivers.json").write_text(json.dumps(out))

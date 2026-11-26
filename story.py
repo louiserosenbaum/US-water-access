@@ -339,7 +339,36 @@ drain = {
     "overlay": overlay, "nostrip": True,
     "legend": [[BASINS[k][0], BASINS[k][1]] for k in ("gulf", "hudson", "atlantic")],
 }
-layers.append(drain)
+# The drainage story gets its own zoomable map (section 02), so it isn't an explorer layer.
+SEA_NAME = {k: v[0] for k, v in BASINS.items()}
+fc = lambda feats: {"type": "FeatureCollection", "features": feats}
+drain_map = {
+    "bounds": rivers["bounds"],
+    "mask": fc([{"type": "Feature", "properties": {}, "geometry": rivers["mask"]}]),
+    "counties": fc([{"type": "Feature", "properties": {"name": f["properties"]["NAME"]}, "geometry": f["geometry"]}
+                    for f in geo["features"]]),
+    "rivers": fc([{"type": "Feature", "geometry": {"type": "LineString", "coordinates": list(zip(r["x"], r["y"]))},
+                   "properties": {"name": r["name"] + " River", "sea": SEA_NAME[r["basin"]], "color": BASINS[r["basin"]][1],
+                                  "w": 3.2 if r["rank"] <= 5 else 2.4 if r["rank"] <= 7 else 1.8 if r["rank"] <= 8 else 1.2}}
+                  for r in rivers["rivers"]]),
+    "lakes": fc([{"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [list(zip(k["x"], k["y"]))]},
+                  "properties": {"name": k["name"], "sea": SEA_NAME[k["basin"]], "color": BASINS[k["basin"]][1]}}
+                 for k in rivers["lakes"]]),
+    "basins": fc([{"type": "Feature", "geometry": b["geometry"],
+                   "properties": {"name": b["name"] + " basin", "official": b["official"], "sea": SEA_NAME[b["sea"]], "color": BASINS[b["sea"]][1],
+                                  "pct": b["pct_state"], "counties": ", ".join(b["counties"]), "n": len(b["counties"])}}
+                  for b in rivers.get("basins", [])]),
+    "labels": [[b["label"][0], b["label"][1], b["name"], BASINS[b["sea"]][1]] for b in rivers.get("basins", [])
+               if b["pct_state"] >= 2],
+    "arrows": [[-97.0, 49.05, "&uarr; to Hudson Bay", BASINS["hudson"][1]],
+               [-91.75, 43.62, "&darr; to the Gulf of Mexico", BASINS["gulf"][1]],
+               [-90.3, 47.25, "&rarr; to the Atlantic", BASINS["atlantic"][1]]],
+    "hill": [-92.93, 47.46],
+    "legend": [[BASINS[k][0], BASINS[k][1]] for k in ("gulf", "hudson", "atlantic")],
+}
+has_basins = bool(drain_map["basins"]["features"])
+area_pct = {k: sum(b["pct_state"] for b in rivers.get("basins", []) if b["sea"] == k) for k in BASINS}
+drain_json = json.dumps(drain_map, separators=(",", ":"))
 
 # Spikes: a column on each county whose height is an absolute count, so big and small places
 # can be compared at a glance (the color shows the rate, the spike shows how many).
@@ -477,6 +506,87 @@ def div(fig, name):
     return fig.to_html(full_html=False, include_plotlyjs=False, div_id=name,
                        config={"displayModeBar": False, "responsive": True})
 
+
+
+DRAIN_JS = """
+<script>
+(function () {
+  const M = JSON.parse(document.getElementById('drain-data').textContent);
+  const el = document.getElementById('drain-map');
+  if (!window.maplibregl) { el.innerHTML = '<p class="note" style="padding:20px">The map could not load.</p>'; return; }
+  const BG = '#f6f4ef';
+  const DEM = {type: 'raster-dem', encoding: 'terrarium', tileSize: 256, maxzoom: 12,
+    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+    attribution: 'Elevation: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a> (USGS and others) &middot; Basins: MN DNR &middot; Rivers: Natural Earth'};
+  const b = M.bounds;
+  const map = new maplibregl.Map({
+    container: el, bounds: [[b[0], b[1]], [b[2], b[3]]], fitBoundsOptions: {padding: 16},
+    maxBounds: [[-104, 40], [-82, 52]], minZoom: 4.5, maxZoom: 12, cooperativeGestures: true,
+    attributionControl: false,
+    style: {version: 8, sources: {}, layers: [{id: 'bg', type: 'background', paint: {'background-color': BG}}]}
+  });
+  map.addControl(new maplibregl.NavigationControl({visualizePitch: true}), 'top-right');
+  map.addControl(new maplibregl.AttributionControl({compact: true}), 'bottom-left');
+
+  map.on('load', () => {
+    el.querySelectorAll('.maplibregl-compact-show').forEach(x => x.classList.remove('maplibregl-compact-show'));
+    map.addSource('dem', DEM);
+    map.addSource('dem3d', Object.assign({}, DEM));
+    map.addLayer({id: 'relief', type: 'hillshade', source: 'dem', paint: {
+      'hillshade-exaggeration': 0.85, 'hillshade-shadow-color': '#2b2b2b',
+      'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': '#4a4a4a'}});
+    ['basins', 'mask', 'counties', 'lakes', 'rivers'].forEach(k => map.addSource(k, {type: 'geojson', data: M[k]}));
+    map.addLayer({id: 'basin-fill', type: 'fill', source: 'basins',
+      paint: {'fill-color': ['get', 'color'], 'fill-opacity': 0.22}});
+    map.addLayer({id: 'mask', type: 'fill', source: 'mask', paint: {'fill-color': BG, 'fill-opacity': 0.82}});
+    map.addLayer({id: 'county-lines', type: 'line', source: 'counties',
+      paint: {'line-color': '#ffffff', 'line-width': 0.6, 'line-opacity': 0.7}});
+    map.addLayer({id: 'basin-line', type: 'line', source: 'basins',
+      paint: {'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.2, 9, 2.5]}});
+    map.addLayer({id: 'lakes', type: 'fill', source: 'lakes',
+      paint: {'fill-color': ['get', 'color'], 'fill-opacity': 0.45, 'fill-outline-color': ['get', 'color']}});
+    map.addLayer({id: 'rivers', type: 'line', source: 'rivers', layout: {'line-cap': 'round', 'line-join': 'round'},
+      paint: {'line-color': ['get', 'color'],
+              'line-width': ['interpolate', ['linear'], ['zoom'], 5, ['*', ['get', 'w'], 0.9], 10, ['*', ['get', 'w'], 3]]}});
+
+    const tag = (html, cls, color) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html;
+      if (color) d.style.color = color; return d; };
+    M.labels.forEach(l => new maplibregl.Marker({element: tag(l[2], 'dm-label', l[3])}).setLngLat([l[0], l[1]]).addTo(map));
+    M.arrows.forEach(a => new maplibregl.Marker({element: tag(a[2], 'dm-arrow', a[3])}).setLngLat([a[0], a[1]]).addTo(map));
+    new maplibregl.Marker({element: tag('<span class="dm-dot"></span>Hill of Three Waters', 'dm-hill')})
+      .setLngLat(M.hill).setPopup(new maplibregl.Popup({offset: 10}).setHTML(
+        '<b>Hill of Three Waters</b><br>Near Hibbing. Rain that falls here can end up in Hudson Bay, the Atlantic or the Gulf of Mexico.'))
+      .addTo(map);
+
+    const pop = new maplibregl.Popup({maxWidth: '280px'});
+    map.on('click', e => {
+      const f = map.queryRenderedFeatures(e.point, {layers: ['rivers', 'lakes', 'basin-fill']})[0];
+      if (!f) return;
+      const p = f.properties;
+      let h = '<b>' + p.name + '</b><br>drains to <b style="color:' + p.color + '">' + p.sea + '</b>';
+      if (f.layer.id === 'basin-fill') h += '<br>' + p.pct + '% of Minnesota &middot; ' + p.n + ' counties' +
+        (p.counties ? '<br><span class="dm-small">' + p.counties + '</span>' : '');
+      pop.setLngLat(e.lngLat).setHTML(h).addTo(map);
+    });
+    ['rivers', 'lakes', 'basin-fill'].forEach(id => {
+      map.on('mouseenter', id, () => map.getCanvas().style.cursor = 'pointer');
+      map.on('mouseleave', id, () => map.getCanvas().style.cursor = '');
+    });
+  });
+
+  const btn = document.getElementById('drain-3d');
+  btn.onclick = () => {
+    const on = btn.getAttribute('aria-pressed') !== 'true';
+    btn.setAttribute('aria-pressed', on);
+    btn.textContent = on ? 'Flat view' : 'Tilt in 3D';
+    if (on) { map.setTerrain({source: 'dem3d', exaggeration: 14}); map.easeTo({pitch: 60, bearing: -15, duration: 1400}); }
+    else { map.easeTo({pitch: 0, bearing: 0, duration: 900}); setTimeout(() => map.setTerrain(null), 900); }
+  };
+  document.getElementById('drain-reset').onclick = () =>
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], {padding: 16, pitch: map.getPitch(), bearing: map.getBearing()});
+})();
+</script>
+"""
 
 
 EXPLORER_JS = """
@@ -699,6 +809,17 @@ html = f"""<!DOCTYPE html>
   .ex-key {{ margin:6px 12px 4px; }}
   .ex-key .bar {{ height:10px; border-radius:5px; }}
   .ex-key .ends {{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:3px; }}
+  #drain-map {{ height:560px; border-radius:8px; overflow:hidden; }}
+  .dm-label {{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; text-align:center;
+               text-shadow:0 0 3px #fff, 0 0 3px #fff, 0 0 6px #fff; pointer-events:none; max-width:120px; line-height:1.2; }}
+  .dm-arrow {{ font-size:13px; font-weight:700; background:rgba(255,255,255,.9); padding:2px 7px; border-radius:6px;
+               pointer-events:none; white-space:nowrap; }}
+  .dm-hill {{ font-size:12px; font-weight:600; color:var(--ink); cursor:pointer; white-space:nowrap;
+              text-shadow:0 0 3px #fff, 0 0 3px #fff; display:flex; align-items:center; gap:5px; }}
+  .dm-dot {{ width:10px; height:10px; border-radius:50%; background:#fff; border:2.5px solid var(--ink); display:inline-block; }}
+  .dm-small {{ font-size:12px; color:var(--muted); }}
+  .dm-tools {{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:12px 0 0; }}
+  @media (max-width: 720px) {{ #drain-map {{ height:460px; }} .dm-arrow {{ display:none; }} .dm-label {{ font-size:9.5px; max-width:80px; }} .dm-hill {{ font-size:10.5px; }} }}
   .ex-legend {{ display:none; flex-wrap:wrap; gap:6px 16px; font-size:13px; color:var(--ink); }}
   .ex-legend span {{ display:inline-flex; align-items:center; gap:6px; }}
   .ex-legend i {{ display:inline-block; width:18px; height:4px; border-radius:2px; }}
@@ -718,6 +839,8 @@ html = f"""<!DOCTYPE html>
   details summary {{ cursor:pointer; color:var(--blue); font-size:14px; margin-top:6px; }}
   @media (max-width: 720px) {{ .ex-grid {{ grid-template-columns: 1fr; }} #ex-search {{ width:140px; }} }}
 </style>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 </head>
 <body>
 <header><div class="wrap">
@@ -741,7 +864,7 @@ html = f"""<!DOCTYPE html>
   <div class="num">01</div>
   <h2>Explore the map</h2>
   <p>Pick a layer to recolor Minnesota's 87 counties. Color shows the rate; the dark spikes show how many,
-     so a big county and a small one can be compared at a glance. <b>Where it drains</b> shows the rivers instead. Click any county for its full profile.</p>
+     so a big county and a small one can be compared at a glance. Click any county for its full profile.</p>
   <div class="ex-controls">
     <div class="ex-buttons" id="ex-buttons"></div>
     <div class="ex-tools">
@@ -769,6 +892,30 @@ html = f"""<!DOCTYPE html>
 
 <section>
   <div class="num">02</div>
+  <h2>Three seas, one state</h2>
+  <p>Rain that falls in Minnesota ends up in one of three places: the <b>Gulf of Mexico</b> by the Mississippi,
+     <b>Hudson Bay</b> by the Red and Rainy rivers, or the <b>Atlantic</b> by Lake Superior. The divides meet at the
+     Hill of Three Waters near Hibbing. Almost nothing flows in from other states; it all flows out.</p>
+  <p>By land area, about <b>{area_pct["gulf"]:.0f}%</b> of the state drains to the Gulf, <b>{area_pct["hudson"]:.0f}%</b>
+     to Hudson Bay and <b>{area_pct["atlantic"]:.0f}%</b> to the Atlantic.</p>
+  <p>Of the ~{surf_total/1e6:.1f} million people whose community system draws from a river or lake,
+     <b>{surf_pct["gulf"]:.0f}%</b> are on water headed for the Gulf, {surf_pct["atlantic"]:.0f}% for the Atlantic
+     and {surf_pct["hudson"]:.0f}% for Hudson Bay.</p>
+  <div class="dm-tools">
+    <button class="ex-btn" id="drain-3d" aria-pressed="false">Tilt in 3D</button>
+    <button class="ex-btn" id="drain-reset">Reset view</button>
+    <div class="ex-legend" style="display:flex">{"".join(f'<span><i style="background:{c}"></i>{n}</span>' for n, c in drain_map["legend"])}</div>
+  </div>
+  <div class="chart"><div id="drain-map"></div></div>
+  <p class="note">Zoom with the + and &minus; buttons, or pinch (two fingers on a phone, Ctrl or Cmd + scroll on a computer).
+     Click a {"basin, " if has_basins else ""}river or lake to see where it drains. Shading shows the land's relief, exaggerated in 3D so
+     Minnesota's gentle hills show up. Drinking water shares go by each system's home county, so they're approximate.</p>
+  <script type="application/json" id="drain-data">{drain_json}</script>
+  {DRAIN_JS}
+</section>
+
+<section>
+  <div class="num">03</div>
   <h2>Every system, by size</h2>
   <p>Each dot is one water system. Orange means at least one health-based violation in the last five years.
      <span class="hl">{pct_small_viol:.0f}%</span> of systems under {SMALL} people had one, compared with
@@ -778,7 +925,7 @@ html = f"""<!DOCTYPE html>
 </section>
 
 <section id="compare-section">
-  <div class="num">03</div>
+  <div class="num">04</div>
   <h2>Among small systems, tribal systems had about {ratio:.1f}x the violation rate</h2>
   <p>Because small systems have more violations everywhere, this compares only systems under {SMALL} people: <b>{t_hit} of {t_n}</b> tribal systems had a recorded
      health-based violation in the last five years, versus <b>{s_hit} of {s_n}</b> state-regulated ones.</p>
@@ -788,7 +935,7 @@ html = f"""<!DOCTYPE html>
 </section>
 
 <section>
-  <div class="num">04</div>
+  <div class="num">05</div>
   <h2>About 1 in 5 Minnesotans aren't on a community system at all</h2>
   <p>Subtracting the people community systems serve from each county's population leaves about
      <b>{pw_total:,}</b> people ({pw_pct:.0f}%) who get water some other way, mostly private wells.
@@ -807,7 +954,7 @@ html = f"""<!DOCTYPE html>
 </section>
 
 <footer>
-  Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files); U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the 1.2 million private well users figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water, used to calculate hardness; Natural Earth for rivers and lakes.
+  Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files); U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the 1.2 million private well users figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water, used to calculate hardness; Natural Earth for rivers and lakes; Minnesota DNR Watershed Suite for basins; AWS Terrain Tiles (USGS and other sources) for relief. Map built with MapLibre.
   Built with DuckDB SQL and Python/Plotly. Code and method:
   <a href="https://github.com/louiserosenbaum/US-water-access">github.com/louiserosenbaum/US-water-access</a>.
   &middot; Louise Rosenbaum
