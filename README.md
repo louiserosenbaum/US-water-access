@@ -6,7 +6,7 @@
 
 Who drinks from wells, who is responsible for their water, and where are people least protected? This project starts with Minnesota, using EPA drinking water data, SQL (DuckDB), and Python.
 
-**Status:** Minnesota findings published, including private wells and groundwater hardness. The story page has an interactive county map with six layers, including where Minnesota's water drains. The national map is planned for January 31, 2027.
+**Status:** Minnesota findings published, including private wells and groundwater hardness. The story page has an interactive county map with six layers, plus a zoomable shaded-relief map of where Minnesota's water drains (three seas). The national map is planned for January 31, 2027.
 
 ## Key findings: Minnesota
 
@@ -62,6 +62,6 @@ Who drinks from wells, who is responsible for their water, and where are people 
 | 2 | State rules table, every row sourced and dated | Feb 28, 2027 |
 | 3 | Daily data refresh | Mar 31, 2027 |
 
-**Data sources:** EPA Safe Drinking Water Information System (SDWIS) for systems, sources, and violations; U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the statewide private well figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water; Natural Earth for rivers and lakes.
+**Data sources:** EPA Safe Drinking Water Information System (SDWIS) for systems, sources, and violations; U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the statewide private well figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water; Natural Earth for rivers and lakes; Minnesota DNR Watershed Suite for drainage basins; AWS Terrain Tiles for shaded relief (map built with MapLibre).
 
 *This project is informational. It cites its sources and is not a health or legal authority.*
