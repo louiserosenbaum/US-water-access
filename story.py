@@ -310,35 +310,6 @@ surf = sys_df[~sys_df["on_wells"] & sys_df["county"].notna()]
 surf_by = surf.groupby(surf["county"].map(lambda c: COUNTY_BASIN.get(c, "gulf")))["population_served"].sum()
 surf_total = int(surf_by.sum())
 surf_pct = {k: 100 * surf_by.get(k, 0) / surf_total for k in BASINS}
-overlay = {"rivers": [], "lakes": []}
-for r in rivers["rivers"]:
-    w = 3.4 if r["rank"] <= 5 else 2.6 if r["rank"] <= 7 else 1.9 if r["rank"] <= 8 else 1.4 if r["rank"] <= 11 else 1.1
-    overlay["rivers"].append({"x": r["x"], "y": r["y"], "c": BASINS[r["basin"]][1], "w": w,
-                              "t": f"<b>{r['name']} River</b><br>drains to {BASINS[r['basin']][0]}"})
-for k in rivers["lakes"]:
-    overlay["lakes"].append({"x": k["x"], "y": k["y"], "c": BASINS[k["basin"]][2], "lc": BASINS[k["basin"]][1],
-                             "t": f"<b>{k['name']}</b><br>drains to {BASINS[k['basin']][0]}"})
-overlay["arrows"] = [  # arrowhead where the water leaves the state, label at the tail: [x, y, tail dx, tail dy (px), label, color]
-    [-97.1, 48.98, 0, 55, "to Hudson Bay", BASINS["hudson"][1]],
-    [-91.22, 43.5, 0, -55, "to the Gulf of Mexico", BASINS["gulf"][1]],
-    [-89.75, 47.05, -75, 0, "to the Atlantic", BASINS["atlantic"][1]],
-]
-overlay["marker"] = [-92.93, 47.46, "Hill of Three Waters"]
-drain = {
-    "key": "drainage", "label": "Where it drains", "values": [None] * len(geom), "log": False,
-    "colors": ["#eef1f4"] * len(geom),
-    "tips": [f"<b>{g['name']} County</b>" for g in geom], "gradient": "", "lo": "", "hi": "",
-    "title": "Three seas, one state",
-    "body": (f"Rain that falls in Minnesota ends up in one of three places: the <b>Gulf of Mexico</b> by the Mississippi, "
-             f"<b>Hudson Bay</b> by the Red and Rainy rivers, or the <b>Atlantic</b> by Lake Superior. The three divides meet "
-             f"at the Hill of Three Waters near Hibbing. Nothing flows in from other states; it all flows out."),
-    "top": ("Of the ~" + f"{surf_total/1e6:.1f}" + " million people whose community system draws from a river or lake:<ul>"
-            + "".join(f"<li>{BASINS[k][0]}: {surf_pct[k]:.0f}%</li>" for k in ("gulf", "atlantic", "hudson")) + "</ul>"),
-    "note": ("Rivers and lakes: Natural Earth, major rivers only. Line width shows river size. Drinking water shares go by "
-             "each system's home county, so they're approximate. Wells aren't counted here."),
-    "overlay": overlay, "nostrip": True,
-    "legend": [[BASINS[k][0], BASINS[k][1]] for k in ("gulf", "hudson", "atlantic")],
-}
 # The drainage story gets its own zoomable map (section 02), so it isn't an explorer layer.
 SEA_NAME = {k: v[0] for k, v in BASINS.items()}
 fc = lambda feats: {"type": "FeatureCollection", "features": feats}
@@ -347,12 +318,13 @@ drain_map = {
     "mask": fc([{"type": "Feature", "properties": {}, "geometry": rivers["mask"]}]),
     "counties": fc([{"type": "Feature", "properties": {"name": f["properties"]["NAME"]}, "geometry": f["geometry"]}
                     for f in geo["features"]]),
-    "rivers": fc([{"type": "Feature", "geometry": {"type": "LineString", "coordinates": list(zip(r["x"], r["y"]))},
-                   "properties": {"name": r["name"] + " River", "sea": SEA_NAME[r["basin"]], "color": BASINS[r["basin"]][1],
-                                  "w": 3.2 if r["rank"] <= 5 else 2.4 if r["rank"] <= 7 else 1.8 if r["rank"] <= 8 else 1.2}}
+    "rivers": fc([{"type": "Feature", "geometry": {"type": "MultiLineString", "coordinates": r["coords"]},
+                   "properties": {"name": r["name"], "sea": SEA_NAME[r["basin"]], "color": BASINS[r["basin"]][1],
+                                  "w": r["w"], "info": f"{r['miles']:,} miles"}}
                   for r in rivers["rivers"]]),
-    "lakes": fc([{"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [list(zip(k["x"], k["y"]))]},
-                  "properties": {"name": k["name"], "sea": SEA_NAME[k["basin"]], "color": BASINS[k["basin"]][1]}}
+    "lakes": fc([{"type": "Feature", "geometry": k["geometry"],
+                  "properties": {"name": k["name"], "sea": SEA_NAME[k["basin"]], "color": BASINS[k["basin"]][1],
+                                 "info": f"{k['acres']:,} acres"}}
                  for k in rivers["lakes"]]),
     "basins": fc([{"type": "Feature", "geometry": b["geometry"],
                    "properties": {"name": b["name"] + " basin", "official": b["official"], "sea": SEA_NAME[b["sea"]], "color": BASINS[b["sea"]][1],
@@ -517,7 +489,7 @@ DRAIN_JS = """
   const BG = '#f6f4ef';
   const DEM = {type: 'raster-dem', encoding: 'terrarium', tileSize: 256, maxzoom: 12,
     tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
-    attribution: 'Elevation: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a> (USGS and others) &middot; Basins: MN DNR &middot; Rivers: Natural Earth'};
+    attribution: 'Relief: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a> &middot; Water: MN DNR'};
   const b = M.bounds;
   const map = new maplibregl.Map({
     container: el, bounds: [[b[0], b[1]], [b[2], b[3]]], fitBoundsOptions: {padding: 16},
@@ -544,7 +516,7 @@ DRAIN_JS = """
     map.addLayer({id: 'basin-line', type: 'line', source: 'basins',
       paint: {'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.2, 9, 2.5]}});
     map.addLayer({id: 'lakes', type: 'fill', source: 'lakes',
-      paint: {'fill-color': ['get', 'color'], 'fill-opacity': 0.45, 'fill-outline-color': ['get', 'color']}});
+      paint: {'fill-color': ['get', 'color'], 'fill-opacity': 0.75, 'fill-outline-color': ['get', 'color']}});
     map.addLayer({id: 'rivers', type: 'line', source: 'rivers', layout: {'line-cap': 'round', 'line-join': 'round'},
       paint: {'line-color': ['get', 'color'],
               'line-width': ['interpolate', ['linear'], ['zoom'], 5, ['*', ['get', 'w'], 0.9], 10, ['*', ['get', 'w'], 3]]}});
@@ -563,7 +535,8 @@ DRAIN_JS = """
       const f = map.queryRenderedFeatures(e.point, {layers: ['rivers', 'lakes', 'basin-fill']})[0];
       if (!f) return;
       const p = f.properties;
-      let h = '<b>' + p.name + '</b><br>drains to <b style="color:' + p.color + '">' + p.sea + '</b>';
+      let h = '<b>' + p.name + '</b>' + (p.info ? ' <span class="dm-small">' + p.info + '</span>' : '') +
+              '<br>drains to <b style="color:' + p.color + '">' + p.sea + '</b>';
       if (f.layer.id === 'basin-fill') h += '<br>' + p.pct + '% of Minnesota &middot; ' + p.n + ' counties' +
         (p.counties ? '<br><span class="dm-small">' + p.counties + '</span>' : '');
       pop.setLngLat(e.lngLat).setHTML(h).addTo(map);
@@ -954,7 +927,7 @@ html = f"""<!DOCTYPE html>
 </section>
 
 <footer>
-  Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files); U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the 1.2 million private well users figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water, used to calculate hardness; Natural Earth for rivers and lakes; Minnesota DNR Watershed Suite for basins; AWS Terrain Tiles (USGS and other sources) for relief. Map built with MapLibre.
+  Data: EPA SDWIS via ECHO (SDWA public water systems, geographic areas, and violations/enforcement files); U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the 1.2 million private well users figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water, used to calculate hardness; Minnesota DNR for basins (Watershed Suite), lakes of 500+ acres (DNR Hydrography) and major rivers; Natural Earth for Lake Superior; AWS Terrain Tiles (USGS and other sources) for relief. Map built with MapLibre.
   Built with DuckDB SQL and Python/Plotly. Code and method:
   <a href="https://github.com/louiserosenbaum/US-water-access">github.com/louiserosenbaum/US-water-access</a>.
   &middot; Louise Rosenbaum

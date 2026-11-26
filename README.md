@@ -40,7 +40,7 @@ Who drinks from wells, who is responsible for their water, and where are people 
 | 3 | `sql/03_violations.sql` | Counts health-based violations per system, last 5 years |
 | 4 | `sql/04_private_wells.sql` | Joins Census county population to people served, estimates people off community systems |
 | 5 | `sql/05_hardness.sql` | Calculates groundwater hardness per well and per county from calcium and magnesium |
-| 6 | `prep_rivers.py` | Clips Natural Earth rivers and lakes to Minnesota and tags each with the sea it drains to (run once; output committed) |
+| 6 | `prep_rivers.py` | Tags each MN DNR basin, lake and major river with the sea it drains to, for the drainage map (run once; output committed) |
 | 7 | `build.py` | Runs the SQL and writes the summary CSVs to `output/` |
 | 8 | `charts.py` | Draws the README charts (matplotlib) |
 | 9 | `story.py` | Builds the story page in `docs/` (Plotly) |
@@ -62,6 +62,6 @@ Who drinks from wells, who is responsible for their water, and where are people 
 | 2 | State rules table, every row sourced and dated | Feb 28, 2027 |
 | 3 | Daily data refresh | Mar 31, 2027 |
 
-**Data sources:** EPA Safe Drinking Water Information System (SDWIS) for systems, sources, and violations; U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the statewide private well figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water; Natural Earth for rivers and lakes; Minnesota DNR Watershed Suite for drainage basins; AWS Terrain Tiles for shaded relief (map built with MapLibre).
+**Data sources:** EPA Safe Drinking Water Information System (SDWIS) for systems, sources, and violations; U.S. Census Bureau Vintage 2025 county population estimates; Minnesota Department of Health for the statewide private well figure; Water Quality Portal (USGS, EPA, and Minnesota agencies) for calcium and magnesium in well water; Minnesota DNR for drainage basins (Watershed Suite), lakes of 500+ acres (DNR Hydrography) and major rivers; Natural Earth for Lake Superior; AWS Terrain Tiles for shaded relief (map built with MapLibre).
 
 *This project is informational. It cites its sources and is not a health or legal authority.*
