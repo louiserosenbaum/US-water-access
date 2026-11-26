@@ -552,7 +552,12 @@ DRAIN_JS = """
     const on = btn.getAttribute('aria-pressed') !== 'true';
     btn.setAttribute('aria-pressed', on);
     btn.textContent = on ? 'Flat view' : 'Tilt in 3D';
-    if (on) { map.setTerrain({source: 'dem3d', exaggeration: 14}); map.easeTo({pitch: 60, bearing: -15, duration: 1400}); }
+    if (on) {
+      map.setTerrain({source: 'dem3d', exaggeration: 10});
+      // pull back to the whole state, then tilt, so the 3D view shows all three basins at once
+      const cam = map.cameraForBounds([[b[0], b[1]], [b[2], b[3]]], {padding: 30});
+      map.easeTo({center: cam.center, zoom: cam.zoom - 0.25, pitch: 55, bearing: -12, duration: 1600});
+    }
     else { map.easeTo({pitch: 0, bearing: 0, duration: 900}); setTimeout(() => map.setTerrain(null), 900); }
   };
   document.getElementById('drain-reset').onclick = () =>
