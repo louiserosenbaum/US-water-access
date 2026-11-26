@@ -69,6 +69,29 @@ t_hit, t_n, t_pct = int(grp.loc[True, "sum"]), int(grp.loc[True, "count"]), grp.
 s_hit, s_n, s_pct = int(grp.loc[False, "sum"]), int(grp.loc[False, "count"]), grp.loc[False, "pct"]
 ratio = t_pct / s_pct
 
+
+def fisher_two_sided(a, b, c, d):
+    """Fisher's exact test for [[a, b], [c, d]], two-sided (sum of tables no more likely than the observed one)."""
+    from math import comb
+    r1, c1, n = a + b, a + c, a + b + c + d
+    prob = lambda x: comb(c1, x) * comb(n - c1, r1 - x) / comb(n, r1)
+    p_obs = prob(a)
+    return min(1.0, sum(prob(x) for x in range(max(0, r1 + c1 - n), min(r1, c1) + 1) if prob(x) <= p_obs * (1 + 1e-7)))
+
+
+def wilson(k, n, z=1.96):
+    """95% Wilson score interval for k successes out of n, in percent."""
+    ph = k / n
+    centre = (ph + z * z / (2 * n)) / (1 + z * z / n)
+    half = z * ((ph * (1 - ph) / n + z * z / (4 * n * n)) ** 0.5) / (1 + z * z / n)
+    return 100 * (centre - half), 100 * (centre + half)
+
+
+fisher_p = fisher_two_sided(t_hit, t_n - t_hit, s_hit, s_n - s_hit)
+odds_ratio = (t_hit * (s_n - s_hit)) / ((t_n - t_hit) * s_hit)
+t_lo, t_hi = wilson(t_hit, t_n)
+s_lo, s_hi = wilson(s_hit, s_n)
+
 big = sys_df[sys_df["population_served"] >= 10_000]
 pct_big_viol = 100 * big["has_violation"].mean()
 pct_small_viol = 100 * small["has_violation"].mean()
@@ -898,7 +921,7 @@ html = f"""<!DOCTYPE html>
      <span class="hl">{pct_small_viol:.0f}%</span> of systems under {SMALL} people had one, compared with
      {pct_big_viol:.0f}% of systems serving 10,000 or more. Diamonds are tribal systems, which EPA regulates directly.</p>
   <div class="chart">{div(c2, "dots")}</div>
-  <p class="note">Dots are spread up and down within each row so they don't sit on top of each other; the vertical position means nothing.</p>
+  <p class="note">Points are jittered vertically within each size class to reduce overplotting; vertical position carries no information.</p>
 </section>
 
 <section id="compare-section">
@@ -907,8 +930,9 @@ html = f"""<!DOCTYPE html>
   <p>Because small systems have more violations everywhere, this compares only systems under {SMALL} people: <b>{t_hit} of {t_n}</b> tribal systems had a recorded
      health-based violation in the last five years, versus <b>{s_hit} of {s_n}</b> state-regulated ones.</p>
   <div class="chart">{div(c3, "compare")}</div>
-  <p class="note">{t_n} systems is a small group, so one or two systems moves the rate a lot. A recorded violation also
-     depends on testing and reporting, so this measures what's on the record, not water quality directly.</p>
+  <p class="note">Fisher's exact test, p = {fisher_p:.3f} (odds ratio {odds_ratio:.1f}). 95% Wilson intervals: tribal {t_lo:.0f}&ndash;{t_hi:.0f}%,
+     state-regulated {s_lo:.0f}&ndash;{s_hi:.0f}%. With n = {t_n} the tribal estimate is imprecise, but the gap is unlikely to be chance.
+     Recorded violations reflect testing and reporting, not water quality directly.</p>
 </section>
 
 <section>
