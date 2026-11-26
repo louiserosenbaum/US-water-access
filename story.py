@@ -873,8 +873,7 @@ html = f"""<!DOCTYPE html>
   </div>
   <div class="chart"><div id="drain-map"></div></div>
   <p class="note">Zoom with the + and &minus; buttons, or pinch (two fingers on a phone, Ctrl or Cmd + scroll on a computer).
-     Click a {"basin, " if has_basins else ""}river or lake to see where it drains. Shading shows the land's relief, exaggerated in 3D so
-     Minnesota's gentle hills show up. Drinking water shares go by each system's home county, so they're approximate.</p>
+     Click a {"basin, " if has_basins else ""}river or lake to see where it drains. Shading shows the land's relief. Drinking water shares go by each system's home county, so they're approximate.</p>
   <script type="application/json" id="drain-data">{drain_json}</script>
   {DRAIN_JS}
 </section>
