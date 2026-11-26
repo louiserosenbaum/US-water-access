@@ -737,6 +737,15 @@ html = f"""<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Minnesota drinking water: small tribal systems had {ratio:.1f}x the violation rate</title>
+<meta name="description" content="Interactive map of Minnesota drinking water: public systems, private wells, hardness, and where the water drains.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://louiserosenbaum.github.io/US-water-access/">
+<meta property="og:title" content="Minnesota Drinking Water Map">
+<meta property="og:description" content="Who relies on public water versus private wells, hardness by county, and where Minnesota's water drains to three seas.">
+<meta property="og:image" content="https://louiserosenbaum.github.io/US-water-access/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta name="twitter:card" content="summary_large_image">
 <script src="{PLOTLY_JS}"></script>
 <style>
   :root {{ --ink:{INK}; --muted:{MUTED}; --accent:{ORANGE}; --blue:#1c5a99; }}
