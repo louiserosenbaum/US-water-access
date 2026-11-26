@@ -341,8 +341,8 @@ drain = {
 }
 layers.append(drain)
 
-# Bars: a column on each county whose height is an absolute count, so big and small places
-# can be compared at a glance (the color shows the rate, the bar shows how many).
+# Spikes: a column on each county whose height is an absolute count, so big and small places
+# can be compared at a glance (the color shows the rate, the spike shows how many).
 people_served = {n: int(by_name.loc[n, "people"]) for n in by_name.index}
 spike_defs = {
     "source": ("people on community systems", people_served),
@@ -505,15 +505,14 @@ EXPLORER_JS = """
       const vmax = Math.max(...L.spikes), sx = [], sy = [], tx = [], ty = [], tt = [], ti = [];
       D.geom.forEach((g, i) => {
         const v = L.spikes[i]; if (!v) return;
-        const h = 1.6 * v / vmax, w = 0.055;
-        if (h < 0.04) return;
-        sx.push(g.cx - w, g.cx - w, g.cx + w, g.cx + w, g.cx - w, null);
-        sy.push(g.cy, g.cy + h, g.cy + h, g.cy, g.cy, null);
+        const h = 1.6 * v / vmax, w = 0.09;
+        sx.push(g.cx - w, g.cx, g.cx + w, g.cx - w, null);
+        sy.push(g.cy, g.cy + h, g.cy, g.cy, null);
         tx.push(g.cx); ty.push(g.cy + h); ti.push(i);
         tt.push('<b>' + g.name + ' County</b><br>' + v.toLocaleString() + ' ' + L.spike_label);
       });
-      t.push({type: 'scatter', x: sx, y: sy, fill: 'toself', fillcolor: 'rgba(31,41,51,0.8)', mode: 'lines',
-              line: {color: 'rgba(31,41,51,0.8)', width: 0.5}, hoverinfo: 'skip'});
+      t.push({type: 'scatter', x: sx, y: sy, fill: 'toself', fillcolor: 'rgba(31,41,51,0.72)', mode: 'lines',
+              line: {color: 'white', width: 0.6}, hoverinfo: 'skip'});
       t.push({type: 'scatter', x: tx, y: ty, mode: 'markers', marker: {size: 9, color: 'rgba(0,0,0,0)'},
               text: tt, hoverinfo: 'text', customdata: ti});
     }
@@ -572,7 +571,7 @@ EXPLORER_JS = """
   function overview() {
     const L = layer();
     return '<h3>' + L.title + '</h3><p>' + L.body + '</p>' + L.top +
-           (L.spikes ? '<p class="note">Bars show the number of ' + L.spike_label + '.</p>' : '') +
+           (L.spikes ? '<p class="note">Spikes show the number of ' + L.spike_label + '.</p>' : '') +
            '<p class="note">' + esc(L.note) + '</p><p class="note"><b>Click any county</b> for its full profile.</p>';
   }
 
@@ -739,14 +738,14 @@ html = f"""<!DOCTYPE html>
 <section>
   <div class="num">01</div>
   <h2>Explore the map</h2>
-  <p>Pick a layer to recolor Minnesota's 87 counties. Color shows the rate; the dark bars show how many,
+  <p>Pick a layer to recolor Minnesota's 87 counties. Color shows the rate; the dark spikes show how many,
      so a big county and a small one can be compared at a glance. <b>Where it drains</b> shows the rivers instead. Click any county for its full profile.</p>
   <div class="ex-controls">
     <div class="ex-buttons" id="ex-buttons"></div>
     <div class="ex-tools">
       <input id="ex-search" list="ex-county-list" placeholder="Find your county" aria-label="Find your county">
       <datalist id="ex-county-list"></datalist>
-      <label class="ex-check" id="ex-spikes-wrap"><input type="checkbox" id="ex-spikes" checked> Bars</label>
+      <label class="ex-check" id="ex-spikes-wrap"><input type="checkbox" id="ex-spikes" checked> Spikes</label>
     </div>
   </div>
   <div class="ex-grid">
