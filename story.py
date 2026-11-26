@@ -171,7 +171,10 @@ for f in geo["features"]:
     for ring in outer_rings(f["geometry"]):
         xs += [round(pt[0], 4) for pt in ring] + [None]
         ys += [round(pt[1], 4) for pt in ring] + [None]
-    geom.append({"name": name, "x": xs, "y": ys})
+    big = max(outer_rings(f["geometry"]), key=ring_area_sq_mi)   # label point = center of largest piece
+    geom.append({"name": name, "x": xs, "y": ys,
+                 "cx": round(float(np.mean([pt[0] for pt in big])), 4),
+                 "cy": round(float(np.mean([pt[1] for pt in big])), 4)})
     area[name] = sum(ring_area_sq_mi(r) for r in outer_rings(f["geometry"]))
 
 pw_by = pw.set_index("county")
@@ -193,7 +196,9 @@ def build_layer(key, label, ramp, values, tips, lo, hi, lo_txt, hi_txt, title, b
             continue
         t = (np.log10(max(v, lo)) - np.log10(lo)) / (np.log10(hi) - np.log10(lo)) if log else (v - lo) / (hi - lo)
         colors.append(sample_colorscale(scale, float(min(max(t, 0), 1)))[0])
-    return {"key": key, "label": label, "colors": colors,
+    raw = [None if values.get(g["name"]) is None or (isinstance(values.get(g["name"]), float) and np.isnan(values.get(g["name"])))
+           else round(float(values[g["name"]]), 2) for g in geom]
+    return {"key": key, "label": label, "colors": colors, "values": raw, "log": log,
             "tips": [tips.get(g["name"], f"<b>{g['name']} County</b><br>No data") for g in geom],
             "gradient": f"linear-gradient(90deg, {', '.join(ramp)})", "lo": lo_txt, "hi": hi_txt,
             "title": title, "body": body, "top": top_html, "note": note}
@@ -279,7 +284,59 @@ if hard_path.exists():
         "Hardest:<ul>" + top3(v.items(), lambda x: f"{x:.0f} mg/L") + "</ul>",
         "Water Quality Portal well samples, 2010 to now. USGS classes: soft under 60, moderate 61 to 120, hard 121 to 180, very hard over 180 mg/L."))
 
-explorer_json = json.dumps({"geom": geom, "layers": layers})
+# Spikes: a column on each county whose height is an absolute count, so big and small places
+# can be compared at a glance (the color shows the rate, the spike shows how many people).
+people_served = {n: int(by_name.loc[n, "people"]) for n in by_name.index}
+spike_defs = {
+    "source": ("people on community systems", people_served),
+    "private": ("people off public water (est.)", {n: int(r["est_not_on_community"]) for n, r in pw_by.iterrows()}),
+    "quality": ("systems with a health-based violation", {n: int(by_name.loc[n, "with_violation"]) for n in by_name.index}),
+    "population": ("people (2025)", {n: int(x) for n, x in pop.items()}),
+}
+rank_labels = {"source": "% of people on well systems", "private": "% of people off public water",
+               "quality": "% of systems with a health violation", "population": "people per square mile (log scale)",
+               "hardness": "median hardness (mg/L)"}
+for L in layers:
+    L["rank_label"] = rank_labels.get(L["key"], L["label"])
+    if L["key"] in spike_defs:
+        lab, vals = spike_defs[L["key"]]
+        L["spike_label"] = lab
+        L["spikes"] = [vals.get(g["name"], 0) for g in geom]
+
+# County profiles: every measure for one county next to the state figure, plus its water systems
+state = {
+    "wells": pct_people_wells,
+    "private": pw_pct,
+    "quality": 100 * sys_df["has_violation"].mean(),
+    "density": pw_pop / sum(area.values()),
+}
+sys_cols = sys_df.sort_values("population_served", ascending=False)
+profiles = []
+for g in geom:
+    n = g["name"]
+    rows = []
+    if n in by_name.index:
+        r = by_name.loc[n]
+        rows.append(["Served by well systems", f"{r['share_on_wells']:.0f}%", r["share_on_wells"] / 100, state["wells"] / 100,
+                     f"state {state['wells']:.0f}%"])
+        q = 100 * r["with_violation"] / r["systems"]
+        rows.append(["Systems with a health violation", f"{int(r['with_violation'])} of {int(r['systems'])} ({q:.0f}%)",
+                     q / 100, state["quality"] / 100, f"state {state['quality']:.0f}%"])
+    if n in pw_by.index:
+        r = pw_by.loc[n]
+        rows.append(["Off public water (est.)", f"{r['pct_not_on_community']:.0f}% (~{int(r['est_not_on_community']):,})",
+                     r["pct_not_on_community"] / 100, state["private"] / 100, f"state {state['private']:.0f}%"])
+    if n in pop:
+        dens = pop[n] / area[n]
+        f = lambda d: (np.log10(max(d, 2)) - np.log10(2)) / (np.log10(3000) - np.log10(2))
+        rows.append(["People per sq mile (log scale)", f"{dens:,.0f}", min(f(dens), 1), f(state["density"]), f"state {state['density']:.0f}"])
+    systems = [[r.system_name, int(r.population_served), "Wells" if r.on_wells else ("Surface water" if str(r.source_type).startswith("Surface") else "Mixed"),
+                int(r.health_violations_5yr)]
+               for r in sys_cols[sys_cols["county"] == n].itertuples()]
+    profiles.append({"name": n, "pop": int(pop.get(n, 0)), "rows": [[a, b, round(float(c), 3), round(float(d), 3), e] for a, b, c, d, e in rows],
+                     "systems": systems})
+
+explorer_json = json.dumps({"geom": geom, "layers": layers, "profiles": profiles})
 
 # ---------- chart 2: every system as a dot ----------
 order = ["Groundwater (wells)", "Groundwater influenced by surface water"]
@@ -358,41 +415,143 @@ EXPLORER_JS = """
 <script>
 (function () {
   const D = JSON.parse(document.getElementById('explorer-data').textContent);
-  const el = document.getElementById('explorer-map');
-  const layout = {
-    margin: {l: 0, r: 0, t: 0, b: 0}, height: Math.min(520, Math.round(el.clientWidth * 1.05)), showlegend: false, hovermode: 'closest',
+  const N = D.geom.length;
+  const mapEl = document.getElementById('explorer-map');
+  const stripEl = document.getElementById('explorer-strip');
+  const st = {key: D.layers[0].key, sel: null, spikes: true};
+  const INK = '#1f2933';
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const layer = () => D.layers.find(l => l.key === st.key);
+  const baseLayout = h => ({
+    margin: {l: 0, r: 0, t: 0, b: 0}, height: h, showlegend: false, hovermode: 'closest',
     paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-    font: {family: 'Inter, system-ui, sans-serif', size: 13, color: '#1f2933'},
-    hoverlabel: {bgcolor: 'white', bordercolor: '#d0d7de', font: {size: 13, color: '#1f2933'}},
-    xaxis: {visible: false, fixedrange: true},
-    yaxis: {visible: false, fixedrange: true, scaleanchor: 'x', scaleratio: 1 / Math.cos(46.3 * Math.PI / 180)}
-  };
-  function traces(L) {
-    return D.geom.map((g, i) => ({
+    font: {family: 'Inter, system-ui, sans-serif', size: 13, color: INK},
+    hoverlabel: {bgcolor: 'white', bordercolor: '#d0d7de', font: {size: 13, color: INK}}
+  });
+
+  function mapTraces(L) {
+    const t = D.geom.map((g, i) => ({
       type: 'scatter', x: g.x, y: g.y, fill: 'toself', fillcolor: L.colors[i], mode: 'lines',
-      line: {color: 'white', width: 0.8}, hoveron: 'fills', text: L.tips[i], hoverinfo: 'text'
+      line: {color: i === st.sel ? INK : 'white', width: i === st.sel ? 2.5 : 0.8},
+      hoveron: 'fills', text: L.tips[i] + '<br><i>Click for the county profile</i>', hoverinfo: 'text'
     }));
+    if (st.spikes && L.spikes) {
+      const vmax = Math.max(...L.spikes), sx = [], sy = [], tx = [], ty = [], tt = [], ti = [];
+      D.geom.forEach((g, i) => {
+        const v = L.spikes[i]; if (!v) return;
+        const h = 1.6 * v / vmax, w = 0.09;
+        sx.push(g.cx - w, g.cx, g.cx + w, g.cx - w, null);
+        sy.push(g.cy, g.cy + h, g.cy, g.cy, null);
+        tx.push(g.cx); ty.push(g.cy + h); ti.push(i);
+        tt.push('<b>' + g.name + ' County</b><br>' + v.toLocaleString() + ' ' + L.spike_label);
+      });
+      t.push({type: 'scatter', x: sx, y: sy, fill: 'toself', fillcolor: 'rgba(31,41,51,0.72)', mode: 'lines',
+              line: {color: 'white', width: 0.6}, hoverinfo: 'skip'});
+      t.push({type: 'scatter', x: tx, y: ty, mode: 'markers', marker: {size: 9, color: 'rgba(0,0,0,0)'},
+              text: tt, hoverinfo: 'text', customdata: ti});
+    }
+    return t;
   }
-  function show(key) {
-    const L = D.layers.find(l => l.key === key);
-    Plotly.react(el, traces(L), layout, {displayModeBar: false, responsive: true});
-    document.getElementById('ex-title').textContent = L.title;
-    document.getElementById('ex-body').innerHTML = L.body;
-    document.getElementById('ex-top').innerHTML = L.top;
-    document.getElementById('ex-note').textContent = L.note;
+
+  function drawMap() {
+    const L = layer(), w = mapEl.clientWidth || 500;
+    const lay = Object.assign(baseLayout(Math.min(540, Math.round(w * 1.1))), {
+      xaxis: {visible: false, fixedrange: true},
+      yaxis: {visible: false, fixedrange: true, scaleanchor: 'x', scaleratio: 1 / Math.cos(46.3 * Math.PI / 180)}
+    });
+    Plotly.react(mapEl, mapTraces(L), lay, {displayModeBar: false, responsive: true});
+  }
+
+  function drawStrip() {
+    const L = layer(), idx = [], xs = [], ys = [], cs = [], tt = [], sz = [], ln = [];
+    D.geom.forEach((g, i) => {
+      const v = L.values[i]; if (v === null) return;
+      idx.push(i); xs.push(L.log ? Math.max(v, 1) : v);
+      ys.push(((i * 37) % 11 - 5) / 10);          // fixed small spread so dots don't overlap
+      cs.push(L.colors[i]); tt.push(L.tips[i]);
+      sz.push(i === st.sel ? 16 : 11); ln.push(i === st.sel ? 2.5 : 0.8);
+    });
+    const lay = Object.assign(baseLayout(110), {
+      margin: {l: 10, r: 10, t: 8, b: 30},
+      xaxis: {type: L.log ? 'log' : 'linear', fixedrange: true, gridcolor: '#eceff2', zeroline: false},
+      yaxis: {visible: false, fixedrange: true, range: [-1, 1]}
+    });
+    Plotly.react(stripEl, [{type: 'scatter', x: xs, y: ys, mode: 'markers', customdata: idx, text: tt, hoverinfo: 'text',
+      marker: {size: sz, color: cs, line: {color: INK, width: ln}}}], lay, {displayModeBar: false, responsive: true});
+  }
+
+  function overview() {
+    const L = layer();
+    return '<h3>' + L.title + '</h3><p>' + L.body + '</p>' + L.top +
+           (L.spikes ? '<p class="note">Spikes show the number of ' + L.spike_label + '.</p>' : '') +
+           '<p class="note">' + esc(L.note) + '</p><p class="note"><b>Click any county</b> for its full profile.</p>';
+  }
+
+  function profile(i) {
+    const P = D.profiles[i];
+    let h = '<a href="#" id="ex-back" class="note">&larr; Back to the layer summary</a>' +
+            '<h3>' + esc(P.name) + ' County</h3>' +
+            (P.pop ? '<p class="note">' + P.pop.toLocaleString() + ' people (2025)</p>' : '');
+    P.rows.forEach(r => {
+      h += '<div class="pr-row"><div class="pr-top"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>' +
+           '<div class="pr-track"><div class="pr-fill" style="width:' + Math.max(r[2] * 100, 1) + '%"></div>' +
+           '<div class="pr-state" style="left:' + (r[3] * 100) + '%" title="' + esc(r[4]) + '"></div></div>' +
+           '<div class="pr-cap">' + esc(r[4]) + ' (line)</div></div>';
+    });
+    const S = P.systems;
+    if (S.length) {
+      const row = s => '<li><b>' + esc(s[0]) + '</b><br><span class="note">' + s[1].toLocaleString() + ' people &middot; ' + s[2] +
+                       (s[3] ? ' &middot; <span class="hl">' + s[3] + ' health violation' + (s[3] > 1 ? 's' : '') + '</span>' : '') + '</span></li>';
+      h += '<h4>' + S.length + ' community water system' + (S.length > 1 ? 's' : '') + '</h4><ul class="sys">' + S.slice(0, 6).map(row).join('') + '</ul>';
+      if (S.length > 6) h += '<details><summary>Show all ' + S.length + '</summary><ul class="sys">' + S.slice(6).map(row).join('') + '</ul></details>';
+    } else {
+      h += '<p>No community water systems in the EPA data for this county.</p>';
+    }
+    return h;
+  }
+
+  function renderPanel() {
+    const panel = document.getElementById('ex-panel');
+    panel.innerHTML = st.sel === null ? overview() : profile(st.sel);
+    const back = document.getElementById('ex-back');
+    if (back) back.onclick = e => { e.preventDefault(); select(null); };
+  }
+
+  function renderKey() {
+    const L = layer();
     document.getElementById('ex-bar').style.background = L.gradient;
     document.getElementById('ex-lo').textContent = L.lo;
     document.getElementById('ex-hi').textContent = L.hi;
-    document.querySelectorAll('.ex-btn').forEach(b => b.setAttribute('aria-pressed', b.dataset.key === key));
+    document.getElementById('ex-strip-title').textContent = 'Every county by ' + L.rank_label + '. Click a dot to open that county.';
   }
+
+  function render() { drawMap(); drawStrip(); renderPanel(); renderKey();
+    document.querySelectorAll('.ex-btn').forEach(b => b.setAttribute('aria-pressed', b.dataset.key === st.key)); }
+  function select(i) { st.sel = i; render(); }
+
   const btns = document.getElementById('ex-buttons');
   D.layers.forEach(L => {
     const b = document.createElement('button');
     b.className = 'ex-btn'; b.dataset.key = L.key; b.textContent = L.label;
-    b.onclick = () => show(L.key);
+    b.onclick = () => { st.key = L.key; render(); };
     btns.appendChild(b);
   });
-  show(D.layers[0].key);
+  document.getElementById('ex-spikes').onchange = e => { st.spikes = e.target.checked; drawMap(); };
+  const list = document.getElementById('ex-county-list');
+  D.geom.map(g => g.name).sort().forEach(n => { const o = document.createElement('option'); o.value = n; list.appendChild(o); });
+  document.getElementById('ex-search').onchange = e => {
+    const q = e.target.value.trim().toLowerCase().replace(/ county$/, '');
+    const i = D.geom.findIndex(g => g.name.toLowerCase() === q);
+    if (i >= 0) select(i);
+  };
+
+  render();
+  mapEl.on('plotly_click', ev => {
+    const p = ev.points[0];
+    if (p.curveNumber < N) select(p.curveNumber);
+    else if (p.customdata !== undefined) select(p.customdata);
+  });
+  stripEl.on('plotly_click', ev => select(ev.points[0].customdata));
 })();
 </script>
 """
@@ -441,7 +600,21 @@ html = f"""<!DOCTYPE html>
   .ex-key {{ margin:6px 12px 4px; }}
   .ex-key .bar {{ height:10px; border-radius:5px; }}
   .ex-key .ends {{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:3px; }}
-  @media (max-width: 720px) {{ .ex-grid {{ grid-template-columns: 1fr; }} }}
+  .ex-controls {{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; }}
+  .ex-tools {{ display:flex; gap:12px; align-items:center; }}
+  #ex-search {{ font:inherit; font-size:14px; padding:7px 12px; border:1px solid #cfd6dd; border-radius:8px; width:170px; }}
+  .ex-check {{ font-size:14px; color:var(--muted); white-space:nowrap; }}
+  .ex-panel h4 {{ margin:16px 0 6px; font-size:15px; }}
+  .pr-row {{ margin:10px 0 12px; }}
+  .pr-top {{ display:flex; justify-content:space-between; gap:8px; font-size:14px; }}
+  .pr-track {{ position:relative; height:10px; background:#eceff2; border-radius:5px; margin-top:4px; }}
+  .pr-fill {{ height:100%; background:#0b3566; border-radius:5px; }}
+  .pr-state {{ position:absolute; top:-3px; width:2px; height:16px; background:{ORANGE}; }}
+  .pr-cap {{ font-size:12px; color:var(--muted); margin-top:2px; }}
+  ul.sys {{ list-style:none; padding:0; margin:0; }}
+  ul.sys li {{ padding:6px 0; border-bottom:1px solid #eceff2; font-size:14px; line-height:1.35; }}
+  details summary {{ cursor:pointer; color:var(--blue); font-size:14px; margin-top:6px; }}
+  @media (max-width: 720px) {{ .ex-grid {{ grid-template-columns: 1fr; }} #ex-search {{ width:140px; }} }}
 </style>
 </head>
 <body>
@@ -465,20 +638,27 @@ html = f"""<!DOCTYPE html>
 <section>
   <div class="num">01</div>
   <h2>Explore the map</h2>
-  <p>Pick a layer to recolor Minnesota's 87 counties. Hover or tap a county for its numbers.</p>
-  <div class="ex-buttons" id="ex-buttons"></div>
+  <p>Pick a layer to recolor Minnesota's 87 counties. Color shows the rate; the dark spikes show how many people,
+     so a big county and a small one can be compared at a glance. Click any county for its full profile.</p>
+  <div class="ex-controls">
+    <div class="ex-buttons" id="ex-buttons"></div>
+    <div class="ex-tools">
+      <input id="ex-search" list="ex-county-list" placeholder="Find your county" aria-label="Find your county">
+      <datalist id="ex-county-list"></datalist>
+      <label class="ex-check"><input type="checkbox" id="ex-spikes" checked> Spikes</label>
+    </div>
+  </div>
   <div class="ex-grid">
     <div class="chart" style="margin-top:8px">
       <div id="explorer-map"></div>
       <div class="ex-key"><div class="bar" id="ex-bar"></div>
         <div class="ends"><span id="ex-lo"></span><span id="ex-hi"></span></div></div>
     </div>
-    <div class="ex-panel">
-      <h3 id="ex-title"></h3>
-      <p id="ex-body"></p>
-      <div id="ex-top"></div>
-      <p class="note" id="ex-note"></p>
-    </div>
+    <div class="ex-panel" id="ex-panel"></div>
+  </div>
+  <div class="chart">
+    <div class="note" id="ex-strip-title" style="margin:2px 8px 0"></div>
+    <div id="explorer-strip"></div>
   </div>
   <script type="application/json" id="explorer-data">{explorer_json}</script>
   {EXPLORER_JS}
