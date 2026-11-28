@@ -44,6 +44,9 @@ Who drinks from wells, who is responsible for their water, and where are people 
 | 7 | `build.py` | Runs the SQL and writes the summary CSVs to `output/` |
 | 8 | `charts.py` | Draws the README charts (matplotlib) |
 | 9 | `story.py` | Builds the story page in `docs/` (Plotly) |
+| 10 | `sql/06_national_tribal.sql` | National tribal vs. state comparison, small systems, by EPA region |
+| 11 | `sql/07_us_counties.sql` | National county summary (systems, share on wells, small-system violations) |
+| 12 | `us_build.py` → `us_map.py` | Runs steps 10 and 11, then builds the draft national map in `docs/us/` |
 
 <details>
 <summary>Run it yourself</summary>
