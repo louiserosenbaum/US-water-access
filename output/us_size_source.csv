@@ -1,0 +1,11 @@
+size_band,source,systems,with_violation
+1 under 100,surface,882,197
+1 under 100,wells,9740,2013
+2 100-499,surface,2050,577
+2 100-499,wells,12919,2597
+"3 500-3,299",surface,3553,1004
+"3 500-3,299",wells,9475,1776
+"4 3,300-9,999",surface,2183,531
+"4 3,300-9,999",wells,2711,465
+"5 10,000+",surface,2839,465
+"5 10,000+",wells,1658,216

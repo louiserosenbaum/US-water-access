@@ -30,6 +30,25 @@ nat_rate = 100 * d["small_with_violation"].sum() / d["small_systems"].sum()
 nat_wells = 100 * (d["share_on_wells"] * d["people_served"]).sum() / d["people_served"].sum()
 counties_rated = int(d["viol_pct"].notna().sum())
 
+st = pd.read_csv("output/us_state_summary.csv")
+st["viol"] = (100 * st["small_with_violation"] / st["small_systems"]).where(st["small_systems"] >= MIN_SMALL)
+st["wells"] = 100 * st["share_on_wells"]
+STATE = {r.state: {"viol": None if pd.isna(r.viol) else round(r.viol, 1), "wells": round(r.wells, 1)} for r in st.itertuples()}
+big = st[st["small_systems"] >= 30].assign(r=lambda x: 100 * x.small_with_violation / x.small_systems).sort_values("r")
+hi3 = ", ".join(f"{r.state} {r.r:.0f}%" for r in big.tail(3)[::-1].itertuples())
+lo3 = ", ".join(f"{r.state} {r.r:.0f}%" for r in big.head(3).itertuples())
+mn = big[big.state == "MN"].iloc[0]
+mn_rank = int((big["r"] < mn.r).sum()) + 1
+
+z = pd.read_csv("output/us_size_source.csv")
+z["band"] = z["size_band"].str[2:]
+z["pct"] = 100 * z["with_violation"] / z["systems"]
+zp = z.pivot(index="band", columns="source", values="pct").reindex([b[2:] for b in sorted(z["size_band"].unique())])
+size_rows = "".join(f"<tr><td>{b}</td><td>{r['wells']:.0f}%</td><td>{r['surface']:.0f}%</td></tr>" for b, r in zp.iterrows())
+sw_all = 100 * z[z.source == "surface"].with_violation.sum() / z[z.source == "surface"].systems.sum()
+gw_all = 100 * z[z.source == "wells"].with_violation.sum() / z[z.source == "wells"].systems.sum()
+
+
 def num(v):
     return None if pd.isna(v) else float(v)
 
@@ -43,6 +62,7 @@ data = {
     "wells": [num(v) for v in d["wells_pct"]],
     "viol": [num(v) for v in d["viol_pct"]],
     "cent": [cents[f] for f in d["fips"]],
+    "state": d["state"].tolist(),
 }
 
 tr = pd.read_csv("output/us_tribal_by_region.csv", dtype={"epa_region": str})
@@ -96,6 +116,12 @@ html = f"""<!DOCTYPE html>
   tr.few td {{ color:var(--muted); }}
   h2 {{ margin:44px 0 6px; font-size:26px; }}
   a {{ color:#1f4e79; }}
+  .finds p {{ font-size:15px; line-height:1.6; margin:0 0 12px; }}
+  .toggle {{ font-size:13px; color:var(--muted); display:flex; gap:6px; align-items:center; margin-left:8px; }}
+  #profile b.big {{ font-size:17px; }}
+  .cmp {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; margin-top:8px; }}
+  .cmp div {{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; }}
+  .cmp span {{ display:block; color:var(--muted); font-size:12px; }}
 </style></head>
 <body><main>
   <div class="kicker">Draft &middot; national view</div>
@@ -110,17 +136,30 @@ html = f"""<!DOCTYPE html>
         <button class="chip on" data-k="wells">Share on wells</button>
         <button class="chip" data-k="viol">Small-system violations</button>
         <button class="chip" data-k="systems">Number of systems</button>
+        <label class="toggle"><input type="checkbox" id="spk" checked> Spikes: people served (150k+)</label>
       </div>
       <input id="find" list="counties" placeholder="Find your county">
       <datalist id="counties"></datalist>
     </div>
     <div id="map"></div>
     <div class="legend"><span id="lo"></span><div class="ramp" id="ramp"></div><span id="hi"></span></div>
-    <p id="profile" class="note">Hover or tap a county for details.</p>
+    <div id="profile" class="note">Hover or tap a county for details.</div>
   </div>
   <p class="note">Community water systems only (year-round systems like city utilities), as of EPA's {pd.Timestamp.today():%B %Y} download.
      Each system is counted in one home county. Violation rates need at least {MIN_SMALL} small systems in a county ({counties_rated:,} counties qualify); the rest are left blank.
      Tribal systems are regulated by EPA and tied to tribal lands rather than counties, so they are compared by region below.</p>
+
+  <h2>What stands out</h2>
+  <div class="card finds">
+    <p><b>Where you live matters more than anything else in the data.</b> Among small systems, the share with a recent
+       health-based violation runs from {hi3} down to {lo3}. Minnesota is {mn.r:.0f}%, {mn_rank}th lowest of {len(big)} states.
+       A gap that wide is mostly about state rules, testing and reporting, not just water.</p>
+    <p><b>Surface water systems get more violations than well systems, at every size.</b> {sw_all:.0f}% of systems that draw from
+       rivers and lakes had one in the last five years, vs. {gw_all:.0f}% of well systems. Surface water needs more treatment,
+       and every treatment step is another rule to break.</p>
+    <table><tr><th>People served</th><th>Well systems with a violation</th><th>Surface water systems</th></tr>{size_rows}</table>
+    <p class="note">State-regulated community systems. States with at least 30 small systems are ranked.</p>
+  </div>
 
   <h2>Tribal systems, region by region</h2>
   <p class="lede" style="font-size:16px">In Minnesota, small tribal systems had about 3.5x the violation rate of similar state systems.
@@ -138,6 +177,8 @@ html = f"""<!DOCTYPE html>
 const GEO = {geo_js};
 const D = {data_js};
 const NAT = {nat_rate:.2f};
+const NATW = {nat_wells:.2f};
+const STATE = {json.dumps(STATE)};
 const PAPER = '#f4f1e6';
 const BLUES = [[0,'#eef2ee'],[0.35,'#b9cfdf'],[0.7,'#5a8dbb'],[1,'#1f4e79']];
 // green = below the national rate, cream = about average, blue = above (like a happiness map: green good)
@@ -161,13 +202,25 @@ function trace(k) {{
            colorscale: L.cs, showscale: false, marker: {{ line: {{ color: PAPER, width: 0.25 }} }},
            text: hover(k), hovertemplate: '%{{text}}<extra></extra>' }};
 }}
+const maxServed = Math.max(...D.served);
+function spikes() {{
+  const lon = [], lat = [];
+  D.served.forEach((v, i) => {{
+    if (v < 150000) return;                      // only counties with 150,000+ people served, so the map stays readable
+    const h = 6 * Math.pow(v / maxServed, 0.75);
+    lon.push(D.cent[i][0] - 0.25, D.cent[i][0], D.cent[i][0] + 0.25, D.cent[i][0] - 0.25, null);
+    lat.push(D.cent[i][1], D.cent[i][1] + h, D.cent[i][1], D.cent[i][1], null);
+  }});
+  return {{ type: 'scattergeo', mode: 'lines', lon, lat, fill: 'toself', fillcolor: 'rgba(31,41,51,0.6)',
+           line: {{ color: 'rgba(255,255,255,0.95)', width: 0.7 }}, hoverinfo: 'skip', visible: document.getElementById('spk').checked }};
+}}
 const hl = {{ type: 'choropleth', geojson: GEO, locations: [], z: [], showscale: false, hoverinfo: 'skip',
              colorscale: [[0,'rgba(0,0,0,0)'],[1,'rgba(0,0,0,0)']], marker: {{ line: {{ color: '#1f2933', width: 2 }} }} }};
 const layout = {{ margin: {{ l: 0, r: 0, t: 0, b: 0 }}, paper_bgcolor: PAPER, dragmode: false,
   geo: {{ scope: 'usa', projection: {{ type: 'albers usa', scale: 1 }}, bgcolor: PAPER, showlakes: false,
          showland: true, landcolor: '#e8e4d4', subunitcolor: '#ffffff', subunitwidth: 0.8 }},
   hoverlabel: {{ bgcolor: '#fff', bordercolor: '#e3dfcf', font: {{ family: 'Inter, sans-serif', size: 13, color: '#1f2933' }} }} }};
-Plotly.newPlot('map', [trace(cur), hl], layout, {{ displayModeBar: false, responsive: true, scrollZoom: false }});
+Plotly.newPlot('map', [trace(cur), hl, spikes()], layout, {{ displayModeBar: false, responsive: true, scrollZoom: false }});
 
 function legend() {{
   const L = LAYERS[cur];
@@ -179,12 +232,18 @@ legend();
 document.querySelectorAll('.chip').forEach(b => b.onclick = () => {{
   document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === b));
   cur = b.dataset.k;
-  Plotly.react('map', [trace(cur), Object.assign({{}}, hl)], document.getElementById('map').layout);
+  Plotly.react('map', [trace(cur), Object.assign({{}}, hl), spikes()], document.getElementById('map').layout);
   legend();
 }});
+document.getElementById('spk').onchange = () => Plotly.restyle('map', {{ visible: document.getElementById('spk').checked }}, [2]);
+const pct = v => v === null || v === undefined ? '&ndash;' : Math.round(v) + '%';
 function show(i) {{
-  document.getElementById('profile').innerHTML = '<b>' + D.label[i] + '</b> &middot; ' + fmt(D.systems[i]) + ' systems serving ' + fmt(D.served[i]) +
-    ' people &middot; ' + (D.wells[i] === null ? '' : D.wells[i].toFixed(0) + '% on wells &middot; ') + LAYERS.viol.tip(i);
+  const S = STATE[D.state[i]] || {{}};
+  document.getElementById('profile').innerHTML = '<b class="big">' + D.label[i] + '</b> &middot; ' + fmt(D.systems[i]) +
+    ' community systems serving ' + fmt(D.served[i]) + ' people' +
+    '<div class="cmp"><div><span>On well water</span><b>' + pct(D.wells[i]) + '</b> here &middot; ' + pct(S.wells) + ' ' + D.state[i] + ' &middot; ' + pct(NATW) + ' U.S.</div>' +
+    '<div><span>Small systems with a violation</span><b>' + (D.viol[i] === null ? 'too few to rate' : pct(D.viol[i])) + '</b> here &middot; ' +
+    pct(S.viol) + ' ' + D.state[i] + ' &middot; ' + pct(NAT) + ' U.S.</div></div>';
 }}
 document.getElementById('map').on('plotly_hover', e => {{ if (e.points[0].curveNumber === 0) show(e.points[0].pointIndex); }});
 document.getElementById('map').on('plotly_click', e => {{ if (e.points[0].curveNumber === 0) show(e.points[0].pointIndex); }});
@@ -195,7 +254,7 @@ document.getElementById('find').addEventListener('change', ev => {{
   const i = D.label.indexOf(ev.target.value);
   if (i < 0) return;
   hl.locations = [D.fips[i]]; hl.z = [0];
-  Plotly.react('map', [trace(cur), hl], Object.assign({{}}, document.getElementById('map').layout,
+  Plotly.react('map', [trace(cur), hl, spikes()], Object.assign({{}}, document.getElementById('map').layout,
     {{ geo: Object.assign({{}}, layout.geo, {{ center: {{ lon: D.cent[i][0], lat: D.cent[i][1] }}, projection: {{ type: 'albers usa', scale: 5 }} }}) }}));
   show(i);
 }});

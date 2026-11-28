@@ -40,6 +40,22 @@ for f in ["06_national_tribal.sql", "07_us_counties.sql"]:
 
 con.execute("COPY (SELECT * FROM us_county_summary ORDER BY fips) TO 'output/us_county_summary.csv' (HEADER)")
 con.execute("COPY (SELECT * FROM us_tribal_by_region) TO 'output/us_tribal_by_region_counts.csv' (HEADER)")
+# State-by-state small-system violation rates and a size/source breakdown, for the "What stands out" section
+con.execute("""COPY (
+  SELECT state, COUNT(*) FILTER (population_served < 500) AS small_systems,
+         COUNT(*) FILTER (population_served < 500 AND has_violation) AS small_with_violation,
+         COUNT(*) AS systems, SUM(population_served) AS people_served,
+         SUM(CASE WHEN on_wells THEN population_served ELSE 0 END) / NULLIF(SUM(population_served), 0) AS share_on_wells
+  FROM us_state_systems GROUP BY state ORDER BY state) TO 'output/us_state_summary.csv' (HEADER)""")
+con.execute("""COPY (
+  SELECT CASE WHEN population_served < 100 THEN '1 under 100'
+              WHEN population_served < 500 THEN '2 100-499'
+              WHEN population_served < 3300 THEN '3 500-3,299'
+              WHEN population_served < 10000 THEN '4 3,300-9,999'
+              ELSE '5 10,000+' END AS size_band,
+         CASE WHEN on_wells THEN 'wells' ELSE 'surface' END AS source,
+         COUNT(*) AS systems, COUNT(*) FILTER (has_violation) AS with_violation
+  FROM us_state_systems GROUP BY ALL ORDER BY 1, 2) TO 'output/us_size_source.csv' (HEADER)""")
 print(con.sql("""SELECT COUNT(*) AS counties, SUM(systems) AS systems, SUM(people_served) AS people_served,
                  ROUND(100.0 * SUM(small_with_violation) / SUM(small_systems), 1) AS small_viol_pct
                  FROM us_county_summary"""))
